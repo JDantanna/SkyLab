@@ -3,6 +3,7 @@ use crate::{Result, desktop};
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
+    io::Read,
     path::{Path, PathBuf},
     process::Command,
 };
@@ -128,12 +129,60 @@ pub fn install_with_progress<F: Fn(&str, u8)>(
     setup: &[u8],
     progress: F,
 ) -> Result<()> {
+    install_source(o, app, SetupSource::Bytes(setup), progress)
+}
+/// Copy the running setup image directly, without allocating another setup-sized buffer.
+pub fn install_from_executable<F: Fn(&str, u8)>(
+    o: &Options,
+    app: &[u8],
+    setup: &Path,
+    progress: F,
+) -> Result<()> {
+    install_source(o, app, SetupSource::File(setup), progress)
+}
+enum SetupSource<'a> {
+    Bytes(&'a [u8]),
+    File(&'a Path),
+}
+impl SetupSource<'_> {
+    fn validate(&self) -> Result<()> {
+        let valid = match self {
+            Self::Bytes(bytes) => bytes.starts_with(b"MZ"),
+            Self::File(path) => {
+                let mut magic = [0; 2];
+                fs::File::open(path)
+                    .map_err(err)?
+                    .read_exact(&mut magic)
+                    .map_err(err)?;
+                magic == *b"MZ"
+            }
+        };
+        if valid {
+            Ok(())
+        } else {
+            Err("Pacote de instalação inválido.".into())
+        }
+    }
+    fn copy_to(&self, destination: &Path) -> Result<()> {
+        match self {
+            Self::Bytes(bytes) => fs::write(destination, bytes).map_err(err),
+            Self::File(path) => fs::copy(path, destination).map(|_| ()).map_err(err),
+        }
+    }
+}
+fn install_source<F: Fn(&str, u8)>(
+    o: &Options,
+    app: &[u8],
+    setup: SetupSource<'_>,
+    progress: F,
+) -> Result<()> {
     progress("Verificando instalação", 5);
     safe_root(o, false)?;
     check_app_closed(o)?;
-    if !app.starts_with(b"MZ") || !setup.starts_with(b"MZ") {
+    if !app.starts_with(b"MZ") {
         return Err("Pacote de instalação inválido.".into());
     }
+    setup.validate()?;
     progress("Preparando pasta", 15);
     fs::create_dir_all(&o.root).map_err(err)?;
     // Ownership is recorded before copying so an interrupted installation can be repaired.
@@ -173,7 +222,7 @@ pub fn install_with_progress<F: Fn(&str, u8)>(
     .map_err(err)?;
     let uninstaller = o.root.join(UNINSTALL);
     let unew = o.root.join("Uninstall.new.exe");
-    fs::write(&unew, setup).map_err(err)?;
+    setup.copy_to(&unew)?;
     if uninstaller.exists() {
         fs::remove_file(&uninstaller)
             .map_err(|_| "Feche a janela de desinstalação antes de atualizar.".to_string())?;

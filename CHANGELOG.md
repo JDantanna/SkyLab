@@ -47,3 +47,10 @@
 - Comandos de projeto à esquerda, consulta de atualização por ícone, idiomas por bandeiras, Sobre no nome SkyLab e exemplo no final de Ajuda.
 - Ícone aprovado aplicado no programa, instalador, janela nativa e executáveis.
 - Pesquisa de opções oficiais Google documentada, sem acesso a endpoints internos do site e sem criação de cobranças.
+
+## 0.1 — revisão de código em três frentes
+
+- Removidos implementações substituídas, estados e seletores sem uso, rota JPEG legada, mensagens nativas sem efeito e comando diagnóstico sem chamadas.
+- Otimizados validação/geração Rust, inspeção KML, cache PROJ, respostas estáticas, cálculo de comprimentos/limites e formatação/desenho da interface.
+- Instalador usa cópia direta do executável, sem buffer integral de aproximadamente 30 MB. Catálogo redundante deixa de ser escrito no cache.
+- Testes integrados, Clippy, compilação nativa e ciclo isolado do instalador passaram. Medições e limites em AUDITORIA-OTIMIZACAO-0.1.md.

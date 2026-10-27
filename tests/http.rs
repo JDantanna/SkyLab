@@ -50,7 +50,11 @@ fn local_server_serves_ui_and_validates_api() {
     assert!(updates.contains("0.1"));
     let js = call(port, "GET", "/app.js", "", None);
     assert!(js.starts_with("HTTP/1.1 200"));
-    assert!(js.contains("function commit"));
+    assert!(js.contains("async function api"));
+    assert!(call(port, "GET", "/brand.jpg", "", None).starts_with("HTTP/1.1 404"));
+    let brand = call(port, "GET", "/brand.svg", "", None);
+    assert!(brand.starts_with("HTTP/1.1 200"));
+    assert!(brand.contains("Cache-Control: no-store"));
     assert!(
         call(port, "POST", "/api", "{}", Some("https://example.com")).starts_with("HTTP/1.1 403")
     );

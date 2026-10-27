@@ -8,13 +8,17 @@ fn main() {
     let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
     println!("cargo:rerun-if-changed=native/vendor/proj");
     let mut files = String::from("{\n");
-    for entry in fs::read_dir(root.join("native/vendor/proj")).unwrap() {
-        let path = entry.unwrap().path();
-        if path.is_file() {
-            let name = path.file_name().unwrap().to_string_lossy();
-            let path = path.to_string_lossy().replace('\\', "/");
-            files.push_str(&format!("{{ let bytes=include_bytes!({path:?}); let file=dir.join({name:?}); if std::fs::read(&file).ok().as_deref()!=Some(bytes.as_slice()) {{ std::fs::write(file,bytes).map_err(|e|e.to_string())?; }} }}\n"));
-        }
+    let mut runtime_files: Vec<_> = fs::read_dir(root.join("native/vendor/proj"))
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        // The searchable catalog is already embedded by projection::CATALOG.
+        .filter(|path| path.is_file() && path.file_name().unwrap() != "catalog.json")
+        .collect();
+    runtime_files.sort();
+    for path in runtime_files {
+        let name = path.file_name().unwrap().to_string_lossy();
+        let path = path.to_string_lossy().replace('\\', "/");
+        files.push_str(&format!("{{ let bytes=include_bytes!({path:?}); let file=dir.join({name:?}); if std::fs::read(&file).ok().as_deref()!=Some(bytes.as_slice()) {{ std::fs::write(file,bytes).map_err(|e|e.to_string())?; }} }}\n"));
     }
     files.push_str("}\n");
     fs::write(out.join("proj_files.rs"), files).unwrap();

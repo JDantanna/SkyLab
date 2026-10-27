@@ -1,5 +1,6 @@
 //! Local mission geometry. Working coordinates use a projected CRS in metres.
 use serde::{Deserialize, Serialize};
+use std::fmt::Write as _;
 pub mod desktop;
 pub mod installation;
 pub mod projection;
@@ -247,6 +248,9 @@ impl Project {
         }
     }
     pub fn validate(&self) -> Result<()> {
+        self.validate_with_lines(&self.lines)
+    }
+    fn validate_with_lines(&self, lines: &[Line]) -> Result<()> {
         if ![1, 2].contains(&self.version) || (self.crs.authority.is_some() && self.version != 2) {
             return Err("Versão de projeto não suportada.".into());
         }
@@ -257,8 +261,8 @@ impl Project {
             .map(|g| g.outer.len() + g.holes.iter().map(Vec::len).sum::<usize>())
             .sum();
         if vertices > 5000
-            || self.lines.len() > 20000
-            || self.lines.iter().map(|l| l.points.len()).sum::<usize>() > 200000
+            || lines.len() > 20000
+            || lines.iter().map(|l| l.points.len()).sum::<usize>() > 200000
         {
             return Err("Projeto excede os limites desta versão.".into());
         }
@@ -277,7 +281,7 @@ impl Project {
             }
         }
         let mut names = std::collections::HashSet::new();
-        for l in &self.lines {
+        for l in lines {
             if !valid_name(&l.name) || !names.insert(&l.name) {
                 return Err(format!(
                     "Nome inválido ou repetido: {}. Use ASCII, sem espaços, até 64 caracteres.",
@@ -292,7 +296,7 @@ impl Project {
             .polygons
             .iter()
             .flat_map(|g| g.outer.iter().chain(g.holes.iter().flatten()))
-            .chain(self.lines.iter().flat_map(|l| l.points.iter()))
+            .chain(lines.iter().flat_map(|l| l.points.iter()))
         {
             self.crs.inverse(*p)?;
         }
@@ -307,12 +311,13 @@ pub fn import_mis(text: &str, crs: Crs) -> Result<Project> {
         if s.is_empty() {
             continue;
         }
-        let cols: Vec<_> = s.split_whitespace().collect();
-        if cols.len() == 2 {
-            let x = cols[0]
+        let mut cols = s.split_whitespace();
+        let (first, second, extra) = (cols.next(), cols.next(), cols.next());
+        if let (Some(x), Some(y), None) = (first, second, extra) {
+            let x = x
                 .parse::<f64>()
                 .map_err(|_| format!("MIS: coordenada inválida na linha {}", i + 1))?;
-            let y = cols[1]
+            let y = y
                 .parse::<f64>()
                 .map_err(|_| format!("MIS: coordenada inválida na linha {}", i + 1))?;
             current
@@ -320,7 +325,7 @@ pub fn import_mis(text: &str, crs: Crs) -> Result<Project> {
                 .ok_or("MIS: coordenadas sem nome de linha")?
                 .points
                 .push([x, y]);
-        } else if cols.len() == 1 && valid_name(s) {
+        } else if first.is_some() && second.is_none() && valid_name(s) {
             if let Some(l) = current.take() {
                 p.lines.push(l)
             }
@@ -353,16 +358,20 @@ fn coords(n: roxmltree::Node, crs: &Crs) -> Result<Vec<Point>> {
         .ok_or("Geometria sem coordinates.")?;
     s.split_whitespace()
         .map(|c| {
-            let v: Vec<_> = c.split(',').collect();
-            if !(2..=3).contains(&v.len()) {
+            let mut parts = c.split(',');
+            let (Some(lon), Some(lat)) = (parts.next(), parts.next()) else {
+                return Err("Tupla KML inválida.".into());
+            };
+            let altitude = parts.next();
+            if parts.next().is_some() {
                 return Err("Tupla KML inválida.".into());
             }
-            if v.len() == 3 && !v[2].parse::<f64>().is_ok_and(f64::is_finite) {
+            if altitude.is_some_and(|alt| !alt.parse::<f64>().is_ok_and(f64::is_finite)) {
                 return Err("Altitude KML inválida.".into());
             }
             crs.forward([
-                v[0].parse().map_err(|_| "Longitude inválida")?,
-                v[1].parse().map_err(|_| "Latitude inválida")?,
+                lon.parse().map_err(|_| "Longitude inválida")?,
+                lat.parse().map_err(|_| "Latitude inválida")?,
             ])
         })
         .collect()
@@ -476,10 +485,12 @@ pub fn import_kml(text: &str, crs: Crs) -> Result<Project> {
 pub fn clip_line(l: &Line, polys: &[Polygon]) -> Vec<Vec<Point>> {
     let mut result: Vec<Vec<Point>> = vec![];
     let mut active: Vec<Point> = vec![];
+    let mut ts = Vec::new();
     for pair in l.points.windows(2) {
         let (a, b) = (pair[0], pair[1]);
         let ab = sub(b, a);
-        let mut ts = vec![0., 1.];
+        ts.clear();
+        ts.extend([0., 1.]);
         for g in polys {
             for ring in std::iter::once(&g.outer).chain(g.holes.iter()) {
                 for w in ring.windows(2) {
@@ -593,7 +604,8 @@ pub fn generate(p: &Project, s: &Settings) -> Result<Vec<Line>> {
                 name: format!("{}{number:06}", s.prefix),
                 points,
             };
-            if length(&line) + EPS < s.min_length || length(&line) < 0.01 {
+            let len = length(&line);
+            if len + EPS < s.min_length || len < 0.01 {
                 continue;
             }
             if s.alternate && out.len() % 2 == 1 {
@@ -608,9 +620,7 @@ pub fn generate(p: &Project, s: &Settings) -> Result<Vec<Line>> {
     if out.is_empty() {
         return Err("Nenhuma linha gerada com esses parâmetros.".into());
     }
-    let mut check = p.clone();
-    check.lines = out.clone();
-    check.validate()?;
+    p.validate_with_lines(&out)?;
     Ok(out)
 }
 pub fn trim_line(l: &Line, start: f64, end: f64) -> Result<Line> {
@@ -631,6 +641,9 @@ pub fn trim_line(l: &Line, start: f64, end: f64) -> Result<Line> {
             pts.push(b)
         }
         acc += d;
+        if acc >= end {
+            break;
+        }
     }
     Ok(Line {
         name: l.name.clone(),
@@ -644,9 +657,10 @@ pub fn export_mis(p: &Project) -> Result<String> {
     }
     let mut s = String::new();
     for l in &p.lines {
-        s += &format!("{}\r\n", l.name);
+        s.push_str(&l.name);
+        s.push_str("\r\n");
         for q in &l.points {
-            s += &format!("{:.2} {:.2}\r\n", q[0], q[1]);
+            write!(s, "{:.2} {:.2}\r\n", q[0], q[1]).expect("writing to String cannot fail");
         }
     }
     import_mis(&s, p.crs.clone()).map_err(|e| format!("MIS arredondado não é válido: {e}"))?;
@@ -658,13 +672,15 @@ pub fn export_kml(p: &Project) -> Result<String> {
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?><kml xmlns=\"http://www.opengis.net/kml/2.2\"><Document>",
     );
     for l in &p.lines {
-        s += &format!(
+        write!(
+            s,
             "<Placemark><name>{}</name><LineString><coordinates>",
             l.name
-        );
+        )
+        .expect("writing to String cannot fail");
         for q in &l.points {
             let v = p.crs.inverse(*q)?;
-            s += &format!("{:.10},{:.10},0 ", v[0], v[1]);
+            write!(s, "{:.10},{:.10},0 ", v[0], v[1]).expect("writing to String cannot fail");
         }
         s += "</coordinates></LineString></Placemark>";
     }

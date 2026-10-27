@@ -11,13 +11,49 @@ use std::{
     net::{Ipv4Addr, TcpListener},
     sync::{Arc, Mutex},
 };
-#[derive(Clone, Serialize)]
+#[derive(Serialize)]
 struct Progress {
     running: bool,
     done: bool,
     percent: u8,
     stage: String,
     error: Option<String>,
+}
+fn start_operation(options: Options, progress: &Arc<Mutex<Progress>>, remove: bool) {
+    *progress.lock().unwrap() = Progress {
+        running: true,
+        done: false,
+        percent: 0,
+        stage: "Verificando instalação".into(),
+        error: None,
+    };
+    let progress = Arc::clone(progress);
+    std::thread::spawn(move || {
+        let update = |stage: &str, percent| {
+            let mut p = progress.lock().unwrap();
+            p.stage = stage.into();
+            p.percent = percent;
+        };
+        let result = if remove {
+            installation::uninstall_with_progress(&options, update)
+        } else {
+            // Copy the setup image in the worker, without a second setup-sized heap buffer.
+            std::env::current_exe()
+                .map_err(|e| e.to_string())
+                .and_then(|setup| {
+                    installation::install_from_executable(
+                        &options,
+                        include_bytes!("../../payload/SkyLab-Rust.exe"),
+                        &setup,
+                        update,
+                    )
+                })
+        };
+        let mut p = progress.lock().unwrap();
+        p.running = false;
+        p.done = true;
+        p.error = result.err();
+    });
 }
 fn main() {
     if let Err(e) = run() {
@@ -38,6 +74,7 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))?;
     let port = listener.local_addr()?.port();
     let origin = format!("http://127.0.0.1:{port}");
+    let expected_host = format!("127.0.0.1:{port}");
     let server = tiny_http::Server::from_listener(listener, None).map_err(|e| e.to_string())?;
     let progress = Arc::new(Mutex::new(Progress {
         running: false,
@@ -71,7 +108,6 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             }
             continue;
         };
-        let expected = format!("127.0.0.1:{port}");
         let host = req
             .headers()
             .iter()
@@ -82,7 +118,7 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             .iter()
             .find(|h| h.field.equiv("Origin"))
             .map(|h| h.value.as_str());
-        if host != Some(expected.as_str()) || from.is_some_and(|s| s != origin) {
+        if host != Some(expected_host.as_str()) || from.is_some_and(|s| s != origin) {
             let _ = req
                 .respond(tiny_http::Response::from_string("Origem recusada").with_status_code(403));
             continue;
@@ -90,7 +126,7 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let mut exit = false;
         let mut launch = false;
         let route = req.url().to_owned();
-        let method = req.method().as_str().to_owned();
+        let method = req.method().clone();
         let(status,mime,bytes)=match(method.as_str(),route.as_str()){
             ("GET","/heartbeat")=>{page_seen=true;last_seen=std::time::Instant::now();(200,"application/json",b"{\"ok\":true}".to_vec())},
             ("GET","/")=>(200,"text/html; charset=utf-8",include_bytes!("../../installer/index.html").to_vec()),
@@ -110,15 +146,10 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                     match route {
                         "/install" if !uninstall=>{
                             options.desktop=v["desktop"].as_bool().unwrap_or(true);
-                            let me=std::fs::read(std::env::current_exe().map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
-                            let opts=options.clone();let state=progress.clone();
-                            *state.lock().unwrap()=Progress{running:true,done:false,percent:0,stage:"Verificando instalação".into(),error:None};
-                            std::thread::spawn(move||{let state2=state.clone();let result=installation::install_with_progress(&opts,include_bytes!("../../payload/SkyLab-Rust.exe"),&me,move|stage,percent|{let mut p=state2.lock().unwrap();p.stage=stage.into();p.percent=percent;});let mut p=state.lock().unwrap();p.running=false;p.done=true;p.error=result.err();});Ok(())
+                            start_operation(options.clone(),&progress,false);Ok(())
                         },
                         "/remove" if uninstall=>{
-                            let opts=options.clone();let state=progress.clone();
-                            *state.lock().unwrap()=Progress{running:true,done:false,percent:0,stage:"Verificando instalação".into(),error:None};
-                            std::thread::spawn(move||{let state2=state.clone();let result=installation::uninstall_with_progress(&opts,move|stage,percent|{let mut p=state2.lock().unwrap();p.stage=stage.into();p.percent=percent;});let mut p=state.lock().unwrap();p.running=false;p.done=true;p.error=result.err();});Ok(())
+                            start_operation(options.clone(),&progress,true);Ok(())
                         },
                         "/finish"=>{exit=true;launch=!uninstall&&!options.test_mode&&options.installed()&&v["launch"].as_bool().unwrap_or(false);Ok(())},
                         _=>Err("Operação indisponível neste modo.".into()),

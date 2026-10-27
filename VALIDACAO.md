@@ -123,3 +123,7 @@ O instalador final 0.1 também passou por instalação, reparo, substituição d
 - Ciclo do instalador final passou em pasta isolada: instalação, reparo, hash do payload, atalhos de teste, desinstalação com remoção do próprio arquivo e preservação do projeto/configuração. Nenhuma instalação pessoal foi substituída durante os testes.
 - Clippy passou com avisos como erros. As capturas layout-0.1.png e instalador-layout-0.1.png mostram o conteúdo das interfaces, sem representar a moldura da janela nativa.
 - Pesquisa Google documentada em GOOGLE-MAPS-CUSTOS.md, com fontes oficiais. Sem chave fornecida, sem imagens reais consultadas e sem alteração de faturamento. A integração de satélite real continua dependendo da configuração da empresa.
+
+## Revisão de otimização — 0.1
+
+A limpeza em três frentes foi integrada e validada; consulte AUDITORIA-OTIMIZACAO-0.1.md. Suíte JavaScript e Rust, Clippy e ciclo completo do instalador isolado passaram. Exemplo da interface preserva 23 linhas/41,28 km, incluindo restauração após exclusão por Ctrl+Z. Medianas locais: geração 66,646 → 50,860 ms; validação de 40 mil vértices 69,860 → 56,855 ms. Dados fictícios, sete execuções medidas após aquecimento. Esses números não garantem o mesmo ganho em outros cenários.

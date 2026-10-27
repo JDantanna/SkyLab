@@ -17,10 +17,6 @@ internal static class Program {
             try { Console.OutputEncoding=new System.Text.UTF8Encoding(false);Console.Write(Fetch(args[1]).GetAwaiter().GetResult()); return 0; }
             catch (Exception e) { Console.Error.Write(e.Message); return 1; }
         }
-        if (args.Length > 0 && args[0] == "--runtime-check") {
-            try { Console.Write(CoreWebView2Environment.GetAvailableBrowserVersionString()); return 0; }
-            catch (Exception e) { Console.Error.Write(e.Message); return 1; }
-        }
         Uri target;
         if (args.Length < 1 || !Uri.TryCreate(args[0], UriKind.Absolute, out target) || target.Scheme != "http" || target.Host != "127.0.0.1") return 2;
         try {
@@ -100,7 +96,7 @@ internal sealed class ShellWindow : Form {
         foreach(var button in captionButtons){var command=button.Command;button.Click+=delegate{RunCommand(command);};caption.Controls.Add(button);}
         Controls.Add(caption);using(var graphics=CreateGraphics()){LayoutCaption(setup?74:72,graphics.DpiX/96.0);}caption.BringToFront();
         LocationChanged+=delegate{if(WindowState==FormWindowState.Normal)MaximizedBounds=Screen.FromHandle(Handle).WorkingArea;};
-        Shown+=Initialize;Resize+=delegate { caption.Invalidate(true);if(ready) browser.CoreWebView2.PostWebMessageAsString(WindowState==FormWindowState.Maximized?"maximized":"restored"); };
+        Shown+=Initialize;Resize+=delegate { caption.Invalidate(true); };
         FormClosing+=CheckClosing;
     }
     protected override void OnHandleCreated(EventArgs e) {
@@ -144,10 +140,13 @@ internal sealed class ShellWindow : Form {
                 }
                 ev.Handled=true;
                 var operation=ev.DownloadOperation;
-                operation.StateChanged+=delegate{
-                    if(operation.State==CoreWebView2DownloadState.Completed)browser.CoreWebView2.PostWebMessageAsString("file-saved");
-                    if(operation.State==CoreWebView2DownloadState.Interrupted)browser.CoreWebView2.PostWebMessageAsString("save-failed");
+                EventHandler<object> finished=null;
+                finished=delegate{
+                    if(operation.State!=CoreWebView2DownloadState.Completed&&operation.State!=CoreWebView2DownloadState.Interrupted)return;
+                    operation.StateChanged-=finished;
+                    browser.CoreWebView2.PostWebMessageAsString(operation.State==CoreWebView2DownloadState.Completed?"file-saved":"save-failed");
                 };
+                operation.StateChanged+=finished;
             };
             browser.CoreWebView2.WindowCloseRequested+=delegate{allowClose=true;Close();};
             browser.CoreWebView2.WebMessageReceived+=Message;

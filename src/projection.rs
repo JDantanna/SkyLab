@@ -32,7 +32,6 @@ mod native {
     use super::*;
     use std::{
         cell::RefCell,
-        collections::HashMap,
         ffi::{CString, c_char, c_void},
         path::PathBuf,
     };
@@ -147,12 +146,12 @@ mod native {
             }
         }
     }
-    thread_local! { static CACHE:RefCell<HashMap<(String,String),Pipeline>>=RefCell::new(HashMap::new()); }
+    thread_local! { static CACHE:RefCell<Vec<(String,String,Pipeline)>>=const { RefCell::new(Vec::new()) }; }
     pub fn transform(from: &str, to: &str, p: Point) -> Result<Point> {
         let a = api()?;
         CACHE.with(|cache|unsafe {
-            let mut cache=cache.borrow_mut();let key=(from.to_owned(),to.to_owned());
-            if !cache.contains_key(&key){
+            let mut cache=cache.borrow_mut();
+            let position=if let Some(position)=cache.iter().position(|(source,target,_)|source==from&&target==to){position}else{
                 let context=(a.context)();
                 if context.is_null(){return Err("Cannot create projection context".into());}
                 let path=CString::new(a.dir.to_string_lossy().as_bytes()).map_err(|e|e.to_string())?;
@@ -168,9 +167,9 @@ mod native {
                 let pj=if raw.is_null(){raw}else{let normalized=(a.normalize)(context,raw);(a.destroy)(raw);normalized};
                 if pj.is_null(){(a.context_destroy)(context);return Err("No accurate offline transformation is available. A datum grid may be required; no approximate transformation was applied.".into());}
                 if cache.len()>=16{cache.clear();}
-                cache.insert(key.clone(),Pipeline{context,pj});
-            }
-            let pipe=&cache[&key];(a.reset)(pipe.pj);
+                cache.push((from.to_owned(),to.to_owned(),Pipeline{context,pj}));cache.len()-1
+            };
+            let pipe=&cache[position].2;(a.reset)(pipe.pj);
             let result=(a.trans)(pipe.pj,1,Coord{v:[p[0],p[1],0.,f64::INFINITY]});
             if (a.errno)(pipe.pj)!=0||!result.v[0].is_finite()||!result.v[1].is_finite(){return Err("Coordinate transformation failed. Check the CRS, area of use and required offline datum grids.".into());}
             Ok([result.v[0],result.v[1]])

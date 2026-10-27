@@ -2,7 +2,7 @@
 use serde::Deserialize;
 use serde_json::{Value, json};
 use skylab_rust::*;
-use std::{io::Read, net::TcpListener};
+use std::{borrow::Cow, io::Read, net::TcpListener};
 #[derive(Deserialize)]
 struct Request {
     op: String,
@@ -24,34 +24,36 @@ fn process(r: Request) -> Result<Value> {
             return Ok(json!({"crs":p.crs,"kind":"declared"}));
         }
         if let Ok(doc) = roxmltree::Document::parse(&r.text) {
-            let mut points = vec![];
+            let mut count = 0usize;
+            let (mut longitude, mut latitude) = (0., 0.);
+            let (mut zones, mut hemispheres) = (0u64, 0u8);
+            let zone_for = |lon: f64| (((lon + 180.) / 6.).floor() as u8 + 1).clamp(1, 60);
             for node in doc
                 .descendants()
                 .filter(|n| n.is_element() && n.tag_name().name() == "coordinates")
             {
                 for tuple in node.text().unwrap_or("").split_whitespace() {
-                    let values: Vec<_> = tuple
-                        .split(',')
-                        .take(2)
-                        .filter_map(|n| n.parse::<f64>().ok())
-                        .collect();
-                    if values.len() == 2
-                        && values.iter().all(|v| v.is_finite())
-                        && (-180.0..=180.0).contains(&values[0])
-                        && (-80.0..=84.0).contains(&values[1])
+                    let mut parts = tuple.split(',');
+                    let lon = parts.next().and_then(|s| s.parse::<f64>().ok());
+                    let lat = parts.next().and_then(|s| s.parse::<f64>().ok());
+                    if let (Some(lon), Some(lat)) = (lon, lat)
+                        && lon.is_finite()
+                        && lat.is_finite()
+                        && (-180.0..=180.0).contains(&lon)
+                        && (-80.0..=84.0).contains(&lat)
                     {
-                        points.push([values[0], values[1]]);
+                        count += 1;
+                        longitude += lon;
+                        latitude += lat;
+                        zones |= 1u64 << (zone_for(lon) - 1);
+                        hemispheres |= if lat < 0. { 1 } else { 2 };
                     }
                 }
             }
-            if !points.is_empty() {
-                let lon = points.iter().map(|p| p[0]).sum::<f64>() / points.len() as f64;
-                let lat = points.iter().map(|p| p[1]).sum::<f64>() / points.len() as f64;
-                let zone = (((lon + 180.) / 6.).floor() as u8 + 1).clamp(1, 60);
-                let south = lat < 0.;
-                let spans = points.iter().any(|p| {
-                    ((p[0] + 180.) / 6.).floor() as u8 + 1 != zone || (p[1] < 0.) != south
-                });
+            if count > 0 {
+                let zone = zone_for(longitude / count as f64);
+                let south = latitude / (count as f64) < 0.;
+                let spans = zones != 1u64 << (zone - 1) || hemispheres != if south { 1 } else { 2 };
                 return Ok(
                     json!({"crs":{"zone":zone,"south":south},"kind":"suggested","spans":spans}),
                 );
@@ -74,7 +76,10 @@ fn process(r: Request) -> Result<Value> {
         return Ok(json!(p));
     }
     let mut p = r.project.ok_or("Projeto ausente")?;
-    p.validate()?;
+    // These public operations validate their input themselves; avoid repeating polygon topology work.
+    if !matches!(r.op.as_str(), "generate" | "export-mis" | "export-kml") {
+        p.validate()?;
+    }
     match r.op.as_str() {
         "reproject" => {
             let target = r.crs.ok_or("Choose the target CRS")?;
@@ -130,7 +135,7 @@ fn process(r: Request) -> Result<Value> {
             }
             return Ok(json!(p));
         }
-        "validate" => {}
+        "validate" => return Ok(json!(p)),
         "generate" => {
             let lines = generate(&p, &r.settings.ok_or("Parâmetros ausentes")?)?;
             if r.append {
@@ -152,13 +157,13 @@ fn process(r: Request) -> Result<Value> {
             if p.polygons.is_empty() {
                 return Err("Importe um polígono para recortar.".into());
             }
-            let mut out = vec![];
-            for (i, l) in p.lines.iter().enumerate() {
+            let mut out = Vec::with_capacity(p.lines.len());
+            for (i, l) in std::mem::take(&mut p.lines).into_iter().enumerate() {
                 if r.index.is_some() && r.index != Some(i) {
-                    out.push(l.clone());
+                    out.push(l);
                     continue;
                 }
-                let pieces = clip_line(l, &p.polygons);
+                let pieces = clip_line(&l, &p.polygons);
                 let count = pieces.len();
                 for (j, points) in pieces.into_iter().enumerate() {
                     out.push(Line {
@@ -239,6 +244,7 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     };
     let mut last_seen = std::time::Instant::now();
     let mut page_seen = false;
+    let expected_host = format!("127.0.0.1:{actual}");
     loop {
         if window
             .as_mut()
@@ -253,7 +259,6 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             }
             continue;
         };
-        let expected_host = format!("127.0.0.1:{actual}");
         let host = req
             .headers()
             .iter()
@@ -269,172 +274,170 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 .respond(tiny_http::Response::from_string("Origem recusada").with_status_code(403));
             continue;
         }
-        if req.method().as_str() == "GET" && req.url() == "/brand.jpg" {
-            let mut response = tiny_http::Response::from_data(
-                include_bytes!("../assets/skytem-logo.jpg").to_vec(),
-            );
-            response
-                .add_header(tiny_http::Header::from_bytes("Content-Type", "image/jpeg").unwrap());
-            let _ = req.respond(response);
-            continue;
-        }
         let mut shutdown = false;
-        if req.method().as_str() == "GET" && req.url() == "/brand.svg" {
-            let mut response = tiny_http::Response::from_data(
-                include_bytes!("../assets/skylab-icon.svg").to_vec(),
-            );
-            response.add_header(
-                tiny_http::Header::from_bytes("Content-Type", "image/svg+xml").unwrap(),
-            );
-            let _ = req.respond(response);
-            continue;
-        }
-        let (status, mime, body) = match (req.method().as_str(), req.url()) {
-            ("POST", "/activate") => {
-                let child = desktop::open(&origin, false);
-                if window.is_none() {
-                    window = child;
-                }
-                (200, "application/json", "{\"ok\":true}".into())
-            }
-            ("GET", "/window.js") => (
-                200,
-                "text/javascript; charset=utf-8",
-                include_str!("../web/window.js").into(),
-            ),
-            ("GET", "/window.css") => (
-                200,
-                "text/css; charset=utf-8",
-                include_str!("../web/window.css").into(),
-            ),
-            ("GET", "/updates/check") => match updates::check() {
-                Ok(check) => (
-                    200,
-                    "application/json",
-                    json!({"ok":true,"data":check}).to_string(),
-                ),
-                Err(e) => (
-                    400,
-                    "application/json",
-                    json!({"ok":false,"error":e}).to_string(),
-                ),
-            },
-            ("POST", "/updates/open") => match updates::check() {
-                Ok(check) if check.status == "available" && check.download_url.is_some() => {
-                    let url = check.download_url.unwrap();
-                    #[cfg(windows)]
-                    {
-                        let _ =
-                            desktop::hidden(std::process::Command::new("explorer.exe").arg(url))
-                                .spawn();
+        let (status, mime, body): (u16, &str, Cow<'static, str>) =
+            match (req.method().as_str(), req.url()) {
+                ("POST", "/activate") => {
+                    let child = desktop::open(&origin, false);
+                    if window.is_none() {
+                        window = child;
                     }
                     (200, "application/json", "{\"ok\":true}".into())
                 }
-                _ => (
-                    400,
-                    "application/json",
-                    "{\"ok\":false,\"error\":\"Nenhum endereço de atualização disponível.\"}"
-                        .into(),
+                ("GET", "/brand.svg") => (
+                    200,
+                    "image/svg+xml",
+                    include_str!("../assets/skylab-icon.svg").into(),
                 ),
-            },
-            ("GET", "/heartbeat") => {
-                page_seen = true;
-                last_seen = std::time::Instant::now();
-                (200, "application/json", "{\"ok\":true}".into())
-            }
-            ("GET", "/identity") => (
-                200,
-                "text/plain",
-                format!(
-                    "skytem-skylab-local-planner native-window-v3 {}",
-                    updates::display_version()
+                ("GET", "/window.js") => (
+                    200,
+                    "text/javascript; charset=utf-8",
+                    include_str!("../web/window.js").into(),
                 ),
-            ),
-            ("POST", "/shutdown") => {
-                shutdown = true;
-                (200, "application/json", "{\"ok\":true}".into())
-            }
-            ("GET", "/") => (
-                200,
-                "text/html; charset=utf-8",
-                include_str!("../web/index.html")
-                    .replace("__VERSION__", updates::display_version()),
-            ),
-            ("GET", "/app.js") => (
-                200,
-                "text/javascript; charset=utf-8",
-                include_str!("../web/app.js").to_string(),
-            ),
-            ("GET", "/interactions.js") => (
-                200,
-                "text/javascript; charset=utf-8",
-                include_str!("../web/interactions.js").into(),
-            ),
-            ("GET", "/controls.js") => (
-                200,
-                "text/javascript; charset=utf-8",
-                include_str!("../web/controls.js").into(),
-            ),
-            ("GET", "/flags/en.svg") => (
-                200,
-                "image/svg+xml",
-                include_str!("../assets/flags/en.svg").into(),
-            ),
-            ("GET", "/flags/pt-BR.svg") => (
-                200,
-                "image/svg+xml",
-                include_str!("../assets/flags/pt-BR.svg").into(),
-            ),
-            ("GET", "/flags/da.svg") => (
-                200,
-                "image/svg+xml",
-                include_str!("../assets/flags/da.svg").into(),
-            ),
-            ("GET", "/workspace.js") => (
-                200,
-                "text/javascript; charset=utf-8",
-                include_str!("../web/workspace.js").into(),
-            ),
-            ("GET", "/languages.js") => (
-                200,
-                "text/javascript; charset=utf-8",
-                include_str!("../web/languages.js").into(),
-            ),
-            ("GET", "/crs-catalog") => (200, "application/json", projection::CATALOG.into()),
-            ("GET", "/style.css") => (
-                200,
-                "text/css; charset=utf-8",
-                include_str!("../web/style.css").to_string(),
-            ),
-            ("POST", "/api") => {
-                let mut buf = String::new();
-                let read = req
-                    .as_reader()
-                    .take(10 * 1024 * 1024 + 1)
-                    .read_to_string(&mut buf);
-                let result = if read.is_err() || buf.len() > 10 * 1024 * 1024 {
-                    Err("Requisição inválida ou maior que 10 MB.".into())
-                } else {
-                    serde_json::from_str::<Request>(&buf)
-                        .map_err(|e| e.to_string())
-                        .and_then(process)
-                };
-                match result {
-                    Ok(v) => (
+                ("GET", "/window.css") => (
+                    200,
+                    "text/css; charset=utf-8",
+                    include_str!("../web/window.css").into(),
+                ),
+                ("GET", "/updates/check") => match updates::check() {
+                    Ok(check) => (
                         200,
                         "application/json",
-                        json!({"ok":true,"data":v}).to_string(),
+                        json!({"ok":true,"data":check}).to_string().into(),
                     ),
                     Err(e) => (
                         400,
                         "application/json",
-                        json!({"ok":false,"error":e}).to_string(),
+                        json!({"ok":false,"error":e}).to_string().into(),
                     ),
+                },
+                ("POST", "/updates/open") => match updates::check() {
+                    Ok(check) if check.status == "available" && check.download_url.is_some() => {
+                        let url = check.download_url.unwrap();
+                        #[cfg(windows)]
+                        {
+                            let _ = desktop::hidden(
+                                std::process::Command::new("explorer.exe").arg(url),
+                            )
+                            .spawn();
+                        }
+                        (200, "application/json", "{\"ok\":true}".into())
+                    }
+                    _ => (
+                        400,
+                        "application/json",
+                        "{\"ok\":false,\"error\":\"Nenhum endereço de atualização disponível.\"}"
+                            .into(),
+                    ),
+                },
+                ("GET", "/heartbeat") => {
+                    page_seen = true;
+                    last_seen = std::time::Instant::now();
+                    (200, "application/json", "{\"ok\":true}".into())
                 }
-            }
-            _ => (404, "text/plain", "Não encontrado".into()),
-        };
-        let mut response = tiny_http::Response::from_string(body).with_status_code(status);
+                ("GET", "/identity") => (
+                    200,
+                    "text/plain",
+                    format!(
+                        "skytem-skylab-local-planner native-window-v3 {}",
+                        updates::display_version()
+                    )
+                    .into(),
+                ),
+                ("POST", "/shutdown") => {
+                    shutdown = true;
+                    (200, "application/json", "{\"ok\":true}".into())
+                }
+                ("GET", "/") => (
+                    200,
+                    "text/html; charset=utf-8",
+                    include_str!("../web/index.html")
+                        .replace("__VERSION__", updates::display_version())
+                        .into(),
+                ),
+                ("GET", "/app.js") => (
+                    200,
+                    "text/javascript; charset=utf-8",
+                    include_str!("../web/app.js").into(),
+                ),
+                ("GET", "/interactions.js") => (
+                    200,
+                    "text/javascript; charset=utf-8",
+                    include_str!("../web/interactions.js").into(),
+                ),
+                ("GET", "/controls.js") => (
+                    200,
+                    "text/javascript; charset=utf-8",
+                    include_str!("../web/controls.js").into(),
+                ),
+                ("GET", "/flags/en.svg") => (
+                    200,
+                    "image/svg+xml",
+                    include_str!("../assets/flags/en.svg").into(),
+                ),
+                ("GET", "/flags/pt-BR.svg") => (
+                    200,
+                    "image/svg+xml",
+                    include_str!("../assets/flags/pt-BR.svg").into(),
+                ),
+                ("GET", "/flags/da.svg") => (
+                    200,
+                    "image/svg+xml",
+                    include_str!("../assets/flags/da.svg").into(),
+                ),
+                ("GET", "/workspace.js") => (
+                    200,
+                    "text/javascript; charset=utf-8",
+                    include_str!("../web/workspace.js").into(),
+                ),
+                ("GET", "/languages.js") => (
+                    200,
+                    "text/javascript; charset=utf-8",
+                    include_str!("../web/languages.js").into(),
+                ),
+                ("GET", "/crs-catalog") => (200, "application/json", projection::CATALOG.into()),
+                ("GET", "/style.css") => (
+                    200,
+                    "text/css; charset=utf-8",
+                    include_str!("../web/style.css").into(),
+                ),
+                ("POST", "/api") => {
+                    let mut buf = String::new();
+                    let read = req
+                        .as_reader()
+                        .take(10 * 1024 * 1024 + 1)
+                        .read_to_string(&mut buf);
+                    let result = if read.is_err() || buf.len() > 10 * 1024 * 1024 {
+                        Err("Requisição inválida ou maior que 10 MB.".into())
+                    } else {
+                        serde_json::from_str::<Request>(&buf)
+                            .map_err(|e| e.to_string())
+                            .and_then(process)
+                    };
+                    match result {
+                        Ok(v) => (
+                            200,
+                            "application/json",
+                            json!({"ok":true,"data":v}).to_string().into(),
+                        ),
+                        Err(e) => (
+                            400,
+                            "application/json",
+                            json!({"ok":false,"error":e}).to_string().into(),
+                        ),
+                    }
+                }
+                _ => (404, "text/plain", "Não encontrado".into()),
+            };
+        // Static assets borrow embedded bytes; dynamic JSON/HTML keep their existing owned buffer.
+        let bytes = body.as_bytes();
+        let mut response = tiny_http::Response::new(
+            tiny_http::StatusCode(status),
+            vec![],
+            bytes,
+            Some(bytes.len()),
+            None,
+        );
         for (k, v) in [
             ("Content-Type", mime),
             ("Cache-Control", "no-store"),
