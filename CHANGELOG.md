@@ -25,3 +25,15 @@
 
 - Primeira versão de planejamento 2D em Rust, com importação KML/MIS, geração, recorte, edição, corte por distância, renomeação e exportação MIS/KML.
 - Projetos JSON, desfazer/refazer, prévia responsiva e validação com o acervo local.
+
+## 0.1 — revisão de operação (sem avanço autorizado)
+
+- Confirmação de CRS em toda abertura: declarado em JSON, sugestão geográfica em KML, confirmação obrigatória em MIS sem metadados.
+- Catálogo PROJ do QGIS instalado, 13.571 definições para busca e 6.920 sistemas atuais de trabalho em metros/eixos leste-norte; reprojeção real, sem aproximação silenciosa quando faltam grades.
+- Shift para seleção múltipla, destaque sincronizado mapa/lista e menu de ferramentas pelo botão direito.
+- Soma de todas as linhas e soma/quantidade selecionadas no fim do painel.
+- Histórico otimizado com 30 estados, Ctrl+Z, Ctrl+Y e restauração da seleção/enquadramento.
+- English inicial, Português (Brasil) e Dansk; tutorial de sete etapas na primeira utilização e repetição em Ajuda.
+- Gravação pelo diálogo nativo, sem painel de downloads ou aviso de saída de página; removido Encerrar do Sobre.
+- Satélite opcional via Google Maps JavaScript API, condicionado à chave/conta da empresa. Configuração e falhas de conexão são tratadas; imagem real permanece sem validação por falta da chave.
+- Projetos com autoridades CRS usam formato de arquivo 2, mantendo a versão do produto 0.1 e a leitura dos projetos antigos.

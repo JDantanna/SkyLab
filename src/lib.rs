@@ -1,7 +1,8 @@
-//! Local mission geometry. Coordinates in a project are WGS84 UTM metres.
+//! Local mission geometry. Working coordinates use a projected CRS in metres.
 use serde::{Deserialize, Serialize};
 pub mod desktop;
 pub mod installation;
+pub mod projection;
 pub mod updates;
 pub type Result<T> = std::result::Result<T, String>;
 pub type Point = [f64; 2];
@@ -10,6 +11,8 @@ const EPS: f64 = 1e-7;
 pub struct Crs {
     pub zone: u8,
     pub south: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authority: Option<String>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Polygon {
@@ -69,6 +72,9 @@ pub fn valid_name(s: &str) -> bool {
 }
 impl Crs {
     pub fn validate(&self) -> Result<()> {
+        if let Some(id) = &self.authority {
+            return projection::validate(id);
+        }
         if !(1..=60).contains(&self.zone) {
             return Err("Zona UTM deve estar entre 1 e 60.".into());
         }
@@ -77,6 +83,9 @@ impl Crs {
     /// Snyder series, restricted to the ordinary six-degree UTM zone.
     pub fn forward(&self, p: Point) -> Result<Point> {
         self.validate()?;
+        if let Some(id) = &self.authority {
+            return projection::transform("EPSG:4326", id, p);
+        }
         let [lon, lat] = p;
         let lon0 = self.zone as f64 * 6. - 183.;
         if !finite(p)
@@ -117,6 +126,9 @@ impl Crs {
     }
     pub fn inverse(&self, p: Point) -> Result<Point> {
         self.validate()?;
+        if let Some(id) = &self.authority {
+            return projection::transform(id, "EPSG:4326", p);
+        }
         if !finite(p)
             || !(100000.0..=900000.0).contains(&p[0])
             || !(0.0..=10000000.0).contains(&p[1])
@@ -227,7 +239,7 @@ fn validate_ring(r: &[Point]) -> Result<()> {
 impl Project {
     pub fn empty(crs: Crs) -> Self {
         Self {
-            version: 1,
+            version: if crs.authority.is_some() { 2 } else { 1 },
             crs,
             polygons: vec![],
             lines: vec![],
@@ -235,7 +247,7 @@ impl Project {
         }
     }
     pub fn validate(&self) -> Result<()> {
-        if self.version != 1 {
+        if ![1, 2].contains(&self.version) || (self.crs.authority.is_some() && self.version != 2) {
             return Err("Versão de projeto não suportada.".into());
         }
         self.crs.validate()?;

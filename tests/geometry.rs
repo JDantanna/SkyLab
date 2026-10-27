@@ -1,6 +1,7 @@
 use skylab_rust::*;
 fn crs() -> Crs {
     Crs {
+        authority: None,
         zone: 23,
         south: true,
     }
@@ -46,6 +47,7 @@ fn projection_matches_published_proj_vectors() {
     for (c, ll, xy) in [
         (
             Crs {
+                authority: None,
                 zone: 32,
                 south: false,
             },
@@ -54,6 +56,7 @@ fn projection_matches_published_proj_vectors() {
         ),
         (
             Crs {
+                authority: None,
                 zone: 59,
                 south: true,
             },
@@ -72,6 +75,7 @@ fn projection_grid_roundtrip() {
     for zone in [1, 23, 32, 60] {
         for lat in [-79., -20., 0.1, 55., 83.] {
             let c = Crs {
+                authority: None,
                 zone,
                 south: lat < 0.,
             };
@@ -89,6 +93,7 @@ fn rejects_wrong_crs_nonfinite_and_out_of_domain() {
     assert!(crs().forward([f64::NAN, -20.]).is_err());
     assert!(
         Crs {
+            authority: None,
             zone: 0,
             south: true
         }

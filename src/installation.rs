@@ -76,6 +76,7 @@ fn safe_root(o: &Options, existing: bool) -> Result<()> {
         APP,
         UNINSTALL,
         "installation.json",
+        "THIRD-PARTY-NOTICES.txt",
         "SkyLab-Rust.previous.exe",
         "SkyLab-Rust.new.exe",
         "Uninstall.new.exe",
@@ -165,6 +166,11 @@ pub fn install_with_progress<F: Fn(&str, u8)>(
         return Err(err(e));
     }
     progress("Preparando desinstalador", 60);
+    fs::write(
+        o.root.join("THIRD-PARTY-NOTICES.txt"),
+        include_bytes!("../assets/THIRD-PARTY-NOTICES.txt"),
+    )
+    .map_err(err)?;
     let uninstaller = o.root.join(UNINSTALL);
     let unew = o.root.join("Uninstall.new.exe");
     fs::write(&unew, setup).map_err(err)?;
@@ -193,6 +199,7 @@ pub fn uninstall_with_progress<F: Fn(&str, u8)>(o: &Options, progress: F) -> Res
         "SkyLab-Rust.previous.exe",
         "SkyLab-Rust.new.exe",
         "Uninstall.new.exe",
+        "THIRD-PARTY-NOTICES.txt",
     ] {
         let p = o.root.join(name);
         if p.exists() {
@@ -206,7 +213,7 @@ pub fn uninstall_with_progress<F: Fn(&str, u8)>(o: &Options, progress: F) -> Res
         && fs::canonicalize(&own).map_err(err)? == fs::canonicalize(&current).map_err(err)?
     {
         // The running uninstaller is deleted after it exits; no recursive directory deletion.
-        let script = "$ErrorActionPreference='Stop'; Wait-Process -Id ([int]$env:SKYLAB_PARENT_PID) -ErrorAction SilentlyContinue; Remove-Item -LiteralPath (Join-Path $env:SKYLAB_INSTALL_ROOT 'Uninstall.exe') -Force; if (-not (Get-ChildItem -LiteralPath $env:SKYLAB_INSTALL_ROOT -Force | Select-Object -First 1)) { Remove-Item -LiteralPath $env:SKYLAB_INSTALL_ROOT }";
+        let script = "$ErrorActionPreference='Stop'; Wait-Process -Id ([int]$env:SKYLAB_PARENT_PID) -ErrorAction SilentlyContinue; $ownedFile=Join-Path $env:SKYLAB_INSTALL_ROOT 'Uninstall.exe'; for($attempt=0;$attempt -lt 60;$attempt++){try{if(Test-Path -LiteralPath $ownedFile){Remove-Item -LiteralPath $ownedFile -Force};break}catch{Start-Sleep -Milliseconds 500}}; if (-not (Get-ChildItem -LiteralPath $env:SKYLAB_INSTALL_ROOT -Force | Select-Object -First 1)) { Remove-Item -LiteralPath $env:SKYLAB_INSTALL_ROOT }";
         desktop::hidden(
             Command::new("powershell.exe")
                 .args(["-NoProfile", "-NonInteractive", "-Command", script])

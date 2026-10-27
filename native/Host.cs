@@ -121,7 +121,12 @@ internal sealed class ShellWindow : Form {
             browser.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled=false;
             browser.CoreWebView2.Settings.IsSwipeNavigationEnabled=false;
             browser.CoreWebView2.NavigationStarting+=delegate(object s,CoreWebView2NavigationStartingEventArgs ev) { Uri next;if(!Uri.TryCreate(ev.Uri,UriKind.Absolute,out next)||next.GetLeftPart(UriPartial.Authority)!=target.GetLeftPart(UriPartial.Authority))ev.Cancel=true; };
-            browser.CoreWebView2.NewWindowRequested+=delegate(object s,CoreWebView2NewWindowRequestedEventArgs ev){ev.Handled=true;};
+            browser.CoreWebView2.NewWindowRequested+=delegate(object s,CoreWebView2NewWindowRequestedEventArgs ev){
+                ev.Handled=true;Uri link;
+                if(ev.IsUserInitiated&&Uri.TryCreate(ev.Uri,UriKind.Absolute,out link)&&link.Scheme=="https"&&(link.Host=="google.com"||link.Host.EndsWith(".google.com",StringComparison.OrdinalIgnoreCase))) {
+                    try{System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(link.AbsoluteUri){UseShellExecute=true});}catch{}
+                }
+            };
             browser.CoreWebView2.DownloadStarting+=delegate(object s,CoreWebView2DownloadStartingEventArgs ev){
                 var testFolder=Environment.GetEnvironmentVariable("SKYLAB_DOWNLOADS");
                 if(!String.IsNullOrEmpty(testFolder)){
@@ -129,7 +134,20 @@ internal sealed class ShellWindow : Form {
                     while(File.Exists(path))path=Path.Combine(testFolder,Path.GetFileNameWithoutExtension(file)+" ("+(number++)+")"+Path.GetExtension(file));
                     ev.ResultFilePath=path;
                 }
+                else {
+                    using(var dialog=new SaveFileDialog()) {
+                        dialog.FileName=Path.GetFileName(ev.ResultFilePath);dialog.Title="SkyLab — Save file";
+                        dialog.Filter="SkyLab files|*.json;*.mis;*.kml|All files|*.*";
+                        if(dialog.ShowDialog(this)!=DialogResult.OK){ev.Cancel=true;ev.Handled=true;browser.CoreWebView2.PostWebMessageAsString("save-cancelled");return;}
+                        ev.ResultFilePath=dialog.FileName;
+                    }
+                }
                 ev.Handled=true;
+                var operation=ev.DownloadOperation;
+                operation.StateChanged+=delegate{
+                    if(operation.State==CoreWebView2DownloadState.Completed)browser.CoreWebView2.PostWebMessageAsString("file-saved");
+                    if(operation.State==CoreWebView2DownloadState.Interrupted)browser.CoreWebView2.PostWebMessageAsString("save-failed");
+                };
             };
             browser.CoreWebView2.WindowCloseRequested+=delegate{allowClose=true;Close();};
             browser.CoreWebView2.WebMessageReceived+=Message;

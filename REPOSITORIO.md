@@ -1,6 +1,6 @@
 # Repositório e continuidade
 
-O código está em um **repositório Git local**, na mesma pasta deste documento. A branch principal é `main`. A versão aprovada é **0.1**. A base inicial permanece em `v0.1.0`; a revisão atual é identificada como `revisao-institucional-0.1`. A antiga marcação 0.2 foi retirada como versão corrente, conforme orientação do usuário, e preservada apenas no histórico preliminar.
+O código está em um **repositório Git local**, na mesma pasta deste documento. A branch principal é `main`. A versão aprovada é **0.1**. A base inicial permanece em `v0.1.0`; a revisão atual é identificada como `revisao-operacao-0.1`. A antiga marcação 0.2 foi retirada como versão corrente, conforme orientação do usuário, e preservada apenas no histórico preliminar.
 
 Este repositório fica no espaço de trabalho local usado por este chat. Não foi publicado em um servidor remoto. Projetos e pastas locais são suportados pelo ambiente GPT/Codex; isso não constitui, por si só, hospedagem Git remota. Consulte a [documentação oficial de projetos](https://learn.chatgpt.com/docs/projects).
 
@@ -11,7 +11,7 @@ Para continuar a manutenção, abra esta pasta como projeto local do aplicativo 
 A entrega inclui um arquivo `.bundle` com todo o histórico e as tags. Para restaurar em outra máquina com Git:
 
 ```text
-git clone SkyLab-repositorio-0.1-institucional.bundle SkyLab
+git clone SkyLab-repositorio-0.1-revisao.bundle SkyLab
 ```
 
 O bundle é uma fotografia do histórico nesta entrega; as próximas alterações ficam no repositório local. Gere um novo bundle quando precisar transportar um histórico atualizado:

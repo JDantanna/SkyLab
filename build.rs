@@ -6,6 +6,18 @@ fn main() {
     }
     let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
     let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+    println!("cargo:rerun-if-changed=native/vendor/proj");
+    let mut files = String::from("{\n");
+    for entry in fs::read_dir(root.join("native/vendor/proj")).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_file() {
+            let name = path.file_name().unwrap().to_string_lossy();
+            let path = path.to_string_lossy().replace('\\', "/");
+            files.push_str(&format!("{{ let bytes=include_bytes!({path:?}); let file=dir.join({name:?}); if std::fs::read(&file).ok().as_deref()!=Some(bytes.as_slice()) {{ std::fs::write(file,bytes).map_err(|e|e.to_string())?; }} }}\n"));
+        }
+    }
+    files.push_str("}\n");
+    fs::write(out.join("proj_files.rs"), files).unwrap();
     println!("cargo:rerun-if-changed=native/Host.cs");
     println!("cargo:rerun-if-changed=native/vendor/webview2");
     let sdk = root.join("native/vendor/webview2");

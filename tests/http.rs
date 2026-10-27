@@ -73,4 +73,47 @@ fn local_server_serves_ui_and_validates_api() {
     );
     assert!(exported.starts_with("HTTP/1.1 200"));
     assert!(exported.contains("500000.00 7800000.00"));
+    let inspect = |text: &str| -> serde_json::Value {
+        let response = call(
+            port,
+            "POST",
+            "/api",
+            &serde_json::json!({"op":"inspect-crs","text":text}).to_string(),
+            None,
+        );
+        serde_json::from_str(response.split_once("\r\n\r\n").unwrap().1).unwrap()
+    };
+    let kml = inspect(
+        "<kml><LineString><coordinates>-45,-20 -44.99,-20</coordinates></LineString></kml>",
+    );
+    assert_eq!(kml["data"]["kind"], "suggested");
+    assert_eq!(kml["data"]["crs"]["zone"], 23);
+    assert_eq!(kml["data"]["crs"]["south"], true);
+    assert_eq!(
+        inspect("L100100\n500000 7800000\n500100 7800100")["data"]["kind"],
+        "unknown"
+    );
+    assert_eq!(
+        inspect(&data["data"].to_string())["data"]["kind"],
+        "declared"
+    );
+    let response=call(port,"POST","/api",&serde_json::json!({"op":"reproject","project":data["data"],"crs":{"zone":23,"south":true,"authority":"EPSG:31983"}}).to_string(),None);
+    let projected: serde_json::Value =
+        serde_json::from_str(response.split_once("\r\n\r\n").unwrap().1).unwrap();
+    assert_eq!(projected["ok"], true);
+    assert_eq!(projected["data"]["version"], 2);
+    assert_eq!(projected["data"]["crs"]["authority"], "EPSG:31983");
+    let geographic = call(
+        port,
+        "POST",
+        "/api",
+        &serde_json::json!({"op":"geographic","project":projected["data"]}).to_string(),
+        None,
+    );
+    let geographic: serde_json::Value =
+        serde_json::from_str(geographic.split_once("\r\n\r\n").unwrap().1).unwrap();
+    let lon = geographic["data"]["lines"][0]["points"][0][0]
+        .as_f64()
+        .unwrap();
+    assert!((lon + 45.).abs() < 1e-6);
 }

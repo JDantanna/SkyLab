@@ -18,6 +18,47 @@ struct Request {
     end: Option<f64>,
 }
 fn process(r: Request) -> Result<Value> {
+    if r.op == "inspect-crs" {
+        if let Ok(p) = serde_json::from_str::<Project>(&r.text) {
+            p.crs.validate()?;
+            return Ok(json!({"crs":p.crs,"kind":"declared"}));
+        }
+        if let Ok(doc) = roxmltree::Document::parse(&r.text) {
+            let mut points = vec![];
+            for node in doc
+                .descendants()
+                .filter(|n| n.is_element() && n.tag_name().name() == "coordinates")
+            {
+                for tuple in node.text().unwrap_or("").split_whitespace() {
+                    let values: Vec<_> = tuple
+                        .split(',')
+                        .take(2)
+                        .filter_map(|n| n.parse::<f64>().ok())
+                        .collect();
+                    if values.len() == 2
+                        && values.iter().all(|v| v.is_finite())
+                        && (-180.0..=180.0).contains(&values[0])
+                        && (-80.0..=84.0).contains(&values[1])
+                    {
+                        points.push([values[0], values[1]]);
+                    }
+                }
+            }
+            if !points.is_empty() {
+                let lon = points.iter().map(|p| p[0]).sum::<f64>() / points.len() as f64;
+                let lat = points.iter().map(|p| p[1]).sum::<f64>() / points.len() as f64;
+                let zone = (((lon + 180.) / 6.).floor() as u8 + 1).clamp(1, 60);
+                let south = lat < 0.;
+                let spans = points.iter().any(|p| {
+                    ((p[0] + 180.) / 6.).floor() as u8 + 1 != zone || (p[1] < 0.) != south
+                });
+                return Ok(
+                    json!({"crs":{"zone":zone,"south":south},"kind":"suggested","spans":spans}),
+                );
+            }
+        }
+        return Ok(json!({"crs":null,"kind":"unknown"}));
+    }
     if r.op == "import-kml" || r.op == "import-mis" {
         let crs = r.crs.ok_or("Selecione a projeção.")?;
         return Ok(json!(if r.op == "import-kml" {
@@ -35,6 +76,60 @@ fn process(r: Request) -> Result<Value> {
     let mut p = r.project.ok_or("Projeto ausente")?;
     p.validate()?;
     match r.op.as_str() {
+        "reproject" => {
+            let target = r.crs.ok_or("Choose the target CRS")?;
+            target.validate()?;
+            for g in &mut p.polygons {
+                for point in g.outer.iter_mut().chain(g.holes.iter_mut().flatten()) {
+                    *point = target.forward(p.crs.inverse(*point)?)?;
+                }
+            }
+            for l in &mut p.lines {
+                for point in &mut l.points {
+                    *point = target.forward(p.crs.inverse(*point)?)?;
+                }
+            }
+            p.crs = target;
+            if p.crs.authority.is_some() {
+                p.version = 2;
+            }
+        }
+        "geographic" => {
+            let mut count = 0usize;
+            let mut geographic = |points: &mut Vec<Point>| -> Result<()> {
+                let mut out = Vec::new();
+                for pair in points.windows(2) {
+                    let steps = (distance(pair[0], pair[1]) / 1000.).ceil().max(1.) as usize;
+                    if count.saturating_add(steps) > 200000 {
+                        return Err("Satellite preview exceeds the point limit. Reduce the area or line count.".into());
+                    }
+                    for step in 0..steps {
+                        let t = step as f64 / steps as f64;
+                        out.push(p.crs.inverse([
+                            pair[0][0] + (pair[1][0] - pair[0][0]) * t,
+                            pair[0][1] + (pair[1][1] - pair[0][1]) * t,
+                        ])?);
+                    }
+                    count += steps;
+                }
+                if let Some(point) = points.last() {
+                    out.push(p.crs.inverse(*point)?);
+                    count += 1;
+                }
+                *points = out;
+                Ok(())
+            };
+            for g in &mut p.polygons {
+                geographic(&mut g.outer)?;
+                for hole in &mut g.holes {
+                    geographic(hole)?;
+                }
+            }
+            for l in &mut p.lines {
+                geographic(&mut l.points)?;
+            }
+            return Ok(json!(p));
+        }
         "validate" => {}
         "generate" => {
             let lines = generate(&p, &r.settings.ok_or("Parâmetros ausentes")?)?;
@@ -112,7 +207,7 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 let mut reply = String::new();
                 stream.take(4096).read_to_string(&mut reply)?;
                 if reply.contains("skytem-skylab-local-planner")
-                    && reply.contains("native-window-v1")
+                    && reply.contains("native-window-v2")
                 {
                     if !args.iter().any(|s| s == "--no-open") {
                         let mut activate = std::net::TcpStream::connect(("127.0.0.1", port))?;
@@ -251,7 +346,7 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 200,
                 "text/plain",
                 format!(
-                    "skytem-skylab-local-planner native-window-v1 {}",
+                    "skytem-skylab-local-planner native-window-v2 {}",
                     updates::display_version()
                 ),
             ),
@@ -270,6 +365,17 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 "text/javascript; charset=utf-8",
                 include_str!("../web/app.js").to_string(),
             ),
+            ("GET", "/workspace.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/workspace.js").into(),
+            ),
+            ("GET", "/languages.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/languages.js").into(),
+            ),
+            ("GET", "/crs-catalog") => (200, "application/json", projection::CATALOG.into()),
             ("GET", "/style.css") => (
                 200,
                 "text/css; charset=utf-8",
@@ -311,7 +417,7 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             ("Referrer-Policy", "no-referrer"),
             (
                 "Content-Security-Policy",
-                "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+                "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' https://maps.googleapis.com https://maps.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com; frame-src https://*.google.com; object-src 'none'; frame-ancestors 'none'; base-uri 'none'",
             ),
         ] {
             response.add_header(tiny_http::Header::from_bytes(k, v).unwrap());
