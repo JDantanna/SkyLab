@@ -1,0 +1,6 @@
+/target/
+/payload/
+/dist/
+*.exe
+*.zip
+*.bundle
