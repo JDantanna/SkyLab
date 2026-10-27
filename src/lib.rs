@@ -1,5 +1,7 @@
 //! Local mission geometry. Coordinates in a project are WGS84 UTM metres.
 use serde::{Deserialize, Serialize};
+pub mod desktop;
+pub mod installation;
 pub type Result<T> = std::result::Result<T, String>;
 pub type Point = [f64; 2];
 const EPS: f64 = 1e-7;

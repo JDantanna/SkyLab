@@ -1,0 +1,74 @@
+use std::{env, fs, path::PathBuf, process::Command};
+fn main() {
+    println!("cargo:rerun-if-changed=assets/app.ico");
+    if env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("windows") {
+        return;
+    }
+    let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
+    let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+    let version = env::var("CARGO_PKG_VERSION").unwrap();
+    let numbers = version
+        .split('.')
+        .map(|s| s.parse::<u16>().unwrap_or(0).to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+    let icon = root
+        .join("assets/app.ico")
+        .to_string_lossy()
+        .replace('\\', "/");
+    let rc = format!(
+        r#"1 ICON "{icon}"
+1 VERSIONINFO
+FILEVERSION {numbers},0
+PRODUCTVERSION {numbers},0
+FILEFLAGSMASK 0x3fL
+FILEFLAGS 0
+FILEOS 0x40004L
+FILETYPE 0x1L
+BEGIN
+ BLOCK "StringFileInfo"
+ BEGIN
+  BLOCK "040904b0"
+  BEGIN
+   VALUE "CompanyName", "SkyTEM - uso interno\0"
+   VALUE "FileDescription", "SkyTEM SkyLab\0"
+   VALUE "FileVersion", "{version}\0"
+   VALUE "ProductName", "SkyTEM SkyLab\0"
+   VALUE "ProductVersion", "{version}\0"
+  END
+ END
+ BLOCK "VarFileInfo"
+ BEGIN
+  VALUE "Translation", 0x409, 1200
+ END
+END
+"#
+    );
+    let input = out.join("skylab.rc");
+    let result = out.join("skylab.res");
+    fs::write(&input, rc).unwrap();
+    let kits = PathBuf::from(env::var_os("ProgramFiles(x86)").expect("Windows SDK necessário"))
+        .join("Windows Kits/10/bin");
+    let mut versions: Vec<_> = fs::read_dir(kits)
+        .expect("Windows SDK não encontrado")
+        .filter_map(|e| e.ok())
+        .map(|e| e.path().join("x64/rc.exe"))
+        .filter(|p| p.is_file())
+        .collect();
+    versions.sort();
+    let compiler = versions
+        .last()
+        .expect("rc.exe não encontrado no Windows SDK");
+    let status = Command::new(compiler)
+        .arg("/nologo")
+        .arg("/fo")
+        .arg(&result)
+        .arg(input)
+        .status()
+        .expect("Falha ao executar rc.exe");
+    assert!(
+        status.success(),
+        "Falha ao compilar ícone/versão do produto"
+    );
+    println!("cargo:rustc-link-arg-bins={}", result.display());
+}

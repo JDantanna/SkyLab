@@ -1,0 +1,212 @@
+//! Per-user installation. Only explicitly owned product files are replaced or removed.
+use crate::{Result, desktop};
+use serde::{Deserialize, Serialize};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
+pub const PRODUCT: &str = "skytem.skylab.local";
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const APP: &str = "SkyLab-Rust.exe";
+pub const UNINSTALL: &str = "Uninstall.exe";
+#[derive(Clone)]
+pub struct Options {
+    pub root: PathBuf,
+    pub desktop: bool,
+    pub test_mode: bool,
+}
+#[derive(Serialize, Deserialize)]
+struct Manifest {
+    product: String,
+    version: String,
+    root: PathBuf,
+}
+impl Options {
+    pub fn current_user() -> Result<Self> {
+        let local = std::env::var_os("LOCALAPPDATA").ok_or("LOCALAPPDATA não está disponível")?;
+        Ok(Self {
+            root: PathBuf::from(local)
+                .join("Programs")
+                .join("SkyTEM")
+                .join("SkyLab"),
+            desktop: true,
+            test_mode: false,
+        })
+    }
+    pub fn test(root: PathBuf) -> Self {
+        Self {
+            root,
+            desktop: true,
+            test_mode: true,
+        }
+    }
+    pub fn installed(&self) -> bool {
+        read_manifest(&self.root).is_ok() && self.root.join(APP).is_file()
+    }
+}
+fn err(e: impl std::fmt::Display) -> String {
+    e.to_string()
+}
+fn read_manifest(root: &Path) -> Result<Manifest> {
+    let m: Manifest =
+        serde_json::from_slice(&fs::read(root.join("installation.json")).map_err(err)?)
+            .map_err(err)?;
+    if m.product != PRODUCT || m.root != root {
+        return Err("A pasta não pertence a uma instalação SkyLab reconhecida.".into());
+    }
+    Ok(m)
+}
+fn safe_root(o: &Options, existing: bool) -> Result<()> {
+    if !o.root.is_absolute() || o.root.parent().is_none() {
+        return Err("Destino de instalação inválido.".into());
+    }
+    if let Ok(meta) = fs::symlink_metadata(&o.root) {
+        if meta.file_type().is_symlink() || !meta.is_dir() {
+            return Err("O destino não pode ser um link ou arquivo.".into());
+        }
+        let nonempty = fs::read_dir(&o.root).map_err(err)?.next().is_some();
+        if existing || nonempty {
+            read_manifest(&o.root)?;
+        }
+    } else if existing {
+        return Err("Instalação não encontrada.".into());
+    }
+    for file in [
+        APP,
+        UNINSTALL,
+        "installation.json",
+        "SkyLab-Rust.previous.exe",
+        "SkyLab-Rust.new.exe",
+        "Uninstall.new.exe",
+    ] {
+        if let Ok(meta) = fs::symlink_metadata(o.root.join(file))
+            && (meta.file_type().is_symlink() || !meta.is_file())
+        {
+            return Err(
+                "Um arquivo do produto foi substituído por link ou diretório; operação recusada."
+                    .into(),
+            );
+        }
+    }
+    Ok(())
+}
+fn run_script(script: &str, o: &Options) -> Result<()> {
+    #[cfg(windows)]
+    {
+        let output = desktop::hidden(
+            Command::new("powershell.exe")
+                .args(["-NoProfile", "-NonInteractive", "-Command", script])
+                .env("SKYLAB_INSTALL_ROOT", &o.root)
+                .env("SKYLAB_VERSION", VERSION)
+                .env("SKYLAB_DESKTOP", if o.desktop { "1" } else { "0" })
+                .env("SKYLAB_TEST_MODE", if o.test_mode { "1" } else { "0" }),
+        )
+        .output()
+        .map_err(err)?;
+        if !output.status.success() {
+            return Err(format!(
+                "Não foi possível registrar os atalhos: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            ));
+        }
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (script, o);
+        Err("Instalação disponível somente no Windows.".into())
+    }
+}
+pub fn install(o: &Options, app: &[u8], setup: &[u8]) -> Result<()> {
+    safe_root(o, false)?;
+    check_app_closed(o)?;
+    if !app.starts_with(b"MZ") || !setup.starts_with(b"MZ") {
+        return Err("Pacote de instalação inválido.".into());
+    }
+    fs::create_dir_all(&o.root).map_err(err)?;
+    // Ownership is recorded before copying so an interrupted installation can be repaired.
+    let manifest = Manifest {
+        product: PRODUCT.into(),
+        version: VERSION.into(),
+        root: o.root.clone(),
+    };
+    fs::write(
+        o.root.join("installation.json"),
+        serde_json::to_vec_pretty(&manifest).map_err(err)?,
+    )
+    .map_err(err)?;
+    let target = o.root.join(APP);
+    let new = o.root.join("SkyLab-Rust.new.exe");
+    let previous = o.root.join("SkyLab-Rust.previous.exe");
+    fs::write(&new, app).map_err(err)?;
+    if previous.exists() {
+        fs::remove_file(&previous).map_err(err)?;
+    }
+    if target.exists() {
+        fs::rename(&target, &previous)
+            .map_err(|_| "Feche o SkyLab antes de atualizar e tente novamente.".to_string())?;
+    }
+    if let Err(e) = fs::rename(&new, &target) {
+        if previous.exists() {
+            let _ = fs::rename(&previous, &target);
+        }
+        return Err(err(e));
+    }
+    let uninstaller = o.root.join(UNINSTALL);
+    let unew = o.root.join("Uninstall.new.exe");
+    fs::write(&unew, setup).map_err(err)?;
+    if uninstaller.exists() {
+        fs::remove_file(&uninstaller)
+            .map_err(|_| "Feche a janela de desinstalação antes de atualizar.".to_string())?;
+    }
+    fs::rename(unew, uninstaller).map_err(err)?;
+    run_script(include_str!("../scripts/register.ps1"),o).map_err(|e|format!("Arquivos instalados, mas o registro não terminou. Execute o instalador novamente para reparar. {e}"))?;
+    Ok(())
+}
+pub fn uninstall(o: &Options) -> Result<()> {
+    safe_root(o, true)?;
+    check_app_closed(o)?;
+    run_script(include_str!("../scripts/unregister.ps1"), o)?;
+    for name in [
+        APP,
+        "SkyLab-Rust.previous.exe",
+        "SkyLab-Rust.new.exe",
+        "Uninstall.new.exe",
+    ] {
+        let p = o.root.join(name);
+        if p.exists() {
+            fs::remove_file(p)
+                .map_err(|_| "Feche o SkyLab e tente remover novamente.".to_string())?;
+        }
+    }
+    let own = o.root.join(UNINSTALL);
+    let current = std::env::current_exe().map_err(err)?;
+    if own.exists()
+        && fs::canonicalize(&own).map_err(err)? == fs::canonicalize(&current).map_err(err)?
+    {
+        // The running uninstaller is deleted after it exits; no recursive directory deletion.
+        let script = "$ErrorActionPreference='Stop'; Wait-Process -Id ([int]$env:SKYLAB_PARENT_PID) -ErrorAction SilentlyContinue; Remove-Item -LiteralPath (Join-Path $env:SKYLAB_INSTALL_ROOT 'Uninstall.exe') -Force; if (-not (Get-ChildItem -LiteralPath $env:SKYLAB_INSTALL_ROOT -Force | Select-Object -First 1)) { Remove-Item -LiteralPath $env:SKYLAB_INSTALL_ROOT }";
+        desktop::hidden(
+            Command::new("powershell.exe")
+                .args(["-NoProfile", "-NonInteractive", "-Command", script])
+                .env("SKYLAB_INSTALL_ROOT", &o.root)
+                .env("SKYLAB_PARENT_PID", std::process::id().to_string()),
+        )
+        .spawn()
+        .map_err(err)?;
+    } else if own.exists() {
+        fs::remove_file(own).map_err(err)?;
+    }
+    fs::remove_file(o.root.join("installation.json")).map_err(err)?;
+    let _ = fs::remove_dir(&o.root); // Keep any user-created or unknown files.
+    Ok(())
+}
+
+fn check_app_closed(o: &Options) -> Result<()> {
+    let app = o.root.join(APP);
+    if app.exists() {
+        fs::OpenOptions::new().write(true).open(app).map_err(|_|"Feche o SkyLab antes de continuar; verifique também a permissão de escrita na pasta.".to_owned())?;
+    }
+    Ok(())
+}

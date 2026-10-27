@@ -6,7 +6,7 @@ Executável Windows de 64 bits compilado em modo release. Interface local em por
 
 ### Testes automatizados
 
-**24 testes aprovados**: 23 de geometria/formatos/projeção e 1 de integração HTTP que inicia e encerra seu próprio servidor. `cargo test --offline` e `cargo clippy --all-targets --offline -- -D warnings` passaram. A sintaxe JavaScript também foi verificada com `node --check`.
+**28 testes aprovados na versão 0.2.0**: 23 de geometria/formatos/projeção, 1 de integração HTTP que inicia e encerra seu próprio servidor e 4 de instalação. `cargo test --offline` e `cargo clippy --all-targets --features installer --offline -- -D warnings` passaram após gerar o payload. A sintaxe JavaScript do aplicativo e do instalador também foi verificada com `node --check`.
 
 Cobertura: vetores UTM publicados pelo PROJ nos dois hemisférios; ida e volta de projeção em quatro zonas e cinco latitudes; rejeição de projeção/hemisfério inválidos e valores não finitos; espaçamento, orientação, sentido alternado e numeração; recorte em polígono côncavo, união de blocos, furos, tangências e bordas; preservação de vértices intermediários; corte por distância acumulada; validação topológica; parâmetros inválidos e estouro de numeração; nomes repetidos/incompatíveis; ida e volta MIS, KML e JSON com precisão de ponto flutuante; recusa de linhas que colapsariam ao arredondar o MIS; XML malformado e entidades externas; entrega da interface/API e recusa de origem externa.
 
@@ -68,4 +68,17 @@ Fluxo interativo verificado: demonstração com 23 partes; renomeação; corte d
 4. Preparar zonas de exclusão como furos válidos em SIG. Polígonos independentes de zonas proibidas não são subtraídos automaticamente. O arquivo muito detalhado recusado precisa de tratamento externo adequado.
 5. Validar coordenadas e resultados antes de qualquer uso operacional em voo e acrescentar as verificações de terreno, obstáculos, restrições e manobras exigidas pelo procedimento da operação.
 
-Não foram feitas publicações, uploads de dados, modificações do navegador de bordo ou integração com sistemas de voo.
+## Instalador e identidade — versão 0.2.0
+
+A logo exata foi recuperada do recurso About do SkyLab original, sem executar esse binário. A marca aparece no aplicativo, na tela Sobre e no instalador. Azul-escuro e cinzas da marca orientam a paleta; o instalador compartilha os estilos do aplicativo. Ícone e versão Windows foram incorporados e lidos de volta nos dois executáveis.
+
+Os quatro novos testes verificam instalação/atualização/desinstalação, destinos de atalhos reais `.lnk`, preservação de arquivos pessoais, recusa de pasta desconhecida, recusa de payload inválido e bloqueio de atualização/desinstalação enquanto o aplicativo está em execução, antes de modificar os registros. Em modo de teste, a descrição do registro é gravada em JSON dentro da pasta isolada; o registro e os atalhos pessoais do Windows não são alterados.
+
+Também foi executado o instalador completo com o payload real em pasta de teste. A interface mostrou as fases de preparação e conclusão. Em seguida foi executado o desinstalador instalado, que removeu o aplicativo, atalhos isolados, metadados e seu próprio executável após encerrar. Um projeto fictício colocado dentro da pasta permaneceu intacto. Não foi instalada uma cópia de uso real no perfil do usuário durante a verificação.
+
+A entrada real em Aplicativos instalados é escrita em HKCU pelo script de registro; esse ramo não foi aplicado ao perfil do usuário nesta sessão. Deve ser conferido numa instalação piloto. O instalador não tem assinatura digital corporativa, não implementa instalação por máquina e não inclui atualizador online. A janela usa Edge em modo aplicativo quando disponível, com navegador padrão como alternativa; não é um host WebView2 incorporado.
+
+O código foi organizado em repositório Git local com versões marcadas e uma cópia bundle para migração. Não há hospedagem remota configurada. A documentação do repositório distingue o espaço de trabalho local de um servidor Git e explica como continuar e migrar o histórico.
+
+Não foram feitas publicações, uploads de levantamentos, modificações do navegador de bordo ou integração com sistemas de voo.
+

@@ -1,7 +1,16 @@
 [package]
 name = "skylab-rust"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
+default-run = "skylab-rust"
+
+[features]
+installer = []
+
+[[bin]]
+name = "skylab-setup"
+path = "src/bin/setup.rs"
+required-features = ["installer"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

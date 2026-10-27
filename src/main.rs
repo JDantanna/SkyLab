@@ -1,3 +1,4 @@
+#![cfg_attr(windows, windows_subsystem = "windows")]
 use serde::Deserialize;
 use serde_json::{Value, json};
 use skylab_rust::*;
@@ -86,7 +87,7 @@ fn process(r: Request) -> Result<Value> {
 }
 fn main() {
     if let Err(e) = run() {
-        eprintln!("SkyLab: {e}");
+        desktop::show_error(&e.to_string());
         std::process::exit(1)
     }
 }
@@ -97,7 +98,30 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     } else {
         8777
     };
-    let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port))?;
+    let listener = match TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)) {
+        Ok(listener) => listener,
+        Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
+            // Open only when the listener identifies itself as this application.
+            use std::io::Write;
+            if let Ok(mut stream) = std::net::TcpStream::connect(("127.0.0.1", port)) {
+                stream.set_read_timeout(Some(std::time::Duration::from_secs(2)))?;
+                write!(
+                    stream,
+                    "GET /identity HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n"
+                )?;
+                let mut reply = String::new();
+                stream.take(4096).read_to_string(&mut reply)?;
+                if reply.contains("skytem-skylab-local-planner") {
+                    if !args.iter().any(|s| s == "--no-open") {
+                        desktop::open(&format!("http://127.0.0.1:{port}"));
+                    }
+                    return Ok(());
+                }
+            }
+            return Err(format!("A porta {port} está ocupada por outro programa. Inicie o SkyLab com --port e outra porta.").into());
+        }
+        Err(e) => return Err(e.into()),
+    };
     let actual = listener.local_addr()?.port();
     let origin = format!("http://127.0.0.1:{actual}");
     let server = tiny_http::Server::from_listener(listener, None).map_err(|e| e.to_string())?;
@@ -105,14 +129,17 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         "SkyLab Rust • aplicativo local\nAbra {origin}\nMantenha esta janela aberta. Ctrl+C encerra.\nValide datum, projeção e missão antes de uso em voo."
     );
     if !args.iter().any(|s| s == "--no-open") {
-        #[cfg(target_os = "windows")]
-        {
-            let _ = std::process::Command::new("explorer.exe")
-                .arg(&origin)
-                .spawn();
-        }
+        desktop::open(&origin);
     }
-    for mut req in server.incoming_requests() {
+    let mut last_seen = std::time::Instant::now();
+    let mut page_seen = false;
+    loop {
+        let Some(mut req) = server.recv_timeout(std::time::Duration::from_secs(1))? else {
+            if last_seen.elapsed().as_secs() > if page_seen { 90 } else { 600 } {
+                break;
+            }
+            continue;
+        };
         let expected_host = format!("127.0.0.1:{actual}");
         let host = req
             .headers()
@@ -129,11 +156,31 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 .respond(tiny_http::Response::from_string("Origem recusada").with_status_code(403));
             continue;
         }
+        if req.method().as_str() == "GET" && req.url() == "/brand.jpg" {
+            let mut response = tiny_http::Response::from_data(
+                include_bytes!("../assets/skytem-logo.jpg").to_vec(),
+            );
+            response
+                .add_header(tiny_http::Header::from_bytes("Content-Type", "image/jpeg").unwrap());
+            let _ = req.respond(response);
+            continue;
+        }
+        let mut shutdown = false;
         let (status, mime, body) = match (req.method().as_str(), req.url()) {
+            ("GET", "/heartbeat") => {
+                page_seen = true;
+                last_seen = std::time::Instant::now();
+                (200, "application/json", "{\"ok\":true}".into())
+            }
+            ("GET", "/identity") => (200, "text/plain", "skytem-skylab-local-planner".into()),
+            ("POST", "/shutdown") => {
+                shutdown = true;
+                (200, "application/json", "{\"ok\":true}".into())
+            }
             ("GET", "/") => (
                 200,
                 "text/html; charset=utf-8",
-                include_str!("../web/index.html").to_string(),
+                include_str!("../web/index.html").replace("0.2.0", env!("CARGO_PKG_VERSION")),
             ),
             ("GET", "/app.js") => (
                 200,
@@ -187,6 +234,9 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             response.add_header(tiny_http::Header::from_bytes(k, v).unwrap());
         }
         let _ = req.respond(response);
+        if shutdown {
+            break;
+        }
     }
     Ok(())
 }

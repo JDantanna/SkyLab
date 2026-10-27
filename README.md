@@ -1,12 +1,20 @@
-# SkyLab Rust — planejamento de aerolevantamento
+# SkyTEM SkyLab — planejamento de aerolevantamento
 
 Primeira versão utilizável, local, do fluxo de missões do SkyLab para helicópteros. O cálculo e a validação são feitos em Rust; a interface abre no navegador e funciona sem internet. Não utiliza nem executa o programa antigo.
 
-## Abrir
+## Instalar e abrir
 
-Execute **SkyLab-Rust.exe** nesta pasta. A interface abre em **http://127.0.0.1:8777**. Mantenha a janela do programa aberta enquanto trabalha; Ctrl+C encerra. Se já houver uma instância aberta, use o endereço existente. Para outra porta: `SkyLab-Rust.exe --port 8780`. `--no-open` inicia sem abrir o navegador.
+Execute **SkyTEM-SkyLab-Setup-v0.2.0.exe**, entregue junto ao pacote. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador ou internet e não instala um serviço permanente.
 
-Use **Abrir demonstração** para experimentar um bloco fictício com um furo. A captura em `interface.png` contém somente essa demonstração.
+Abra **SkyLab** pelo menu Iniciar ou pelo atalho. O aplicativo abre uma janela própria do Microsoft Edge quando disponível; usa o navegador padrão como alternativa. O núcleo e o instalador são executáveis Rust, e a interface é servida apenas neste computador. A tela Sobre exibe a marca e a versão. Use **Sobre → Encerrar o SkyLab** para finalizar; fechar a janela também permite encerrar o processo após o período sem comunicação com a página.
+
+O aplicativo atende normalmente em **http://127.0.0.1:8777**. Se a versão portável anterior estiver usando a porta, encerre-a antes de abrir esta versão ou inicie o executável com outra porta: `SkyLab-Rust.exe --port 8780`. `--no-open` inicia sem abrir a interface. Uma segunda abertura reconhece a instância desta versão quando já está ativa.
+
+Para atualizar/reparar, feche o SkyLab e execute o novo instalador. Para remover, use **Aplicativos instalados** do Windows ou `Uninstall.exe` na pasta do programa. Arquivos pessoais e projetos não são removidos. Somente arquivos reconhecidos da instalação são substituídos ou apagados. O instalador não é MSI e instala por usuário; implantação administrativa por máquina ainda não foi implementada.
+
+Os executáveis têm ícone e informações de versão, mas **não possuem assinatura digital corporativa**. A distribuição para outros computadores deve incluir a validação da empresa e, quando disponível, sua assinatura de código.
+
+Use **Abrir demonstração** para experimentar um bloco fictício com um furo. `interface-v0.2.png` registra a interface com a marca SkyTEM; `sobre-v0.2.png` mostra a tela Sobre. As capturas contêm somente a demonstração fictícia.
 
 ## Fluxo do operador
 
@@ -40,7 +48,7 @@ Os arquivos reais foram lidos somente localmente; não estão incluídos neste p
 
 ## Implementação e testes
 
-`src/lib.rs`: projeção WGS84/UTM, leitura/escrita MIS/KML, validação topológica, geração, recorte e corte por distância. `src/main.rs`: servidor local e API sem gravação de arquivos. `web/`: interface incorporada no executável. `tests/`: testes independentes do acervo confidencial. `vendor/`: dependências e licenças para compilação offline; `Cargo.lock` fixa as versões.
+`src/lib.rs`: projeção WGS84/UTM, leitura/escrita MIS/KML, validação topológica, geração, recorte e corte por distância. `src/main.rs`: servidor local e API de planejamento sem gravação de arquivos. `src/installation.rs` e `src/bin/setup.rs`: instalação, atualização e desinstalação. `web/` e `installer/`: interfaces incorporadas nos executáveis. `tests/`: testes independentes do acervo confidencial. `vendor/`: dependências e licenças para compilação offline; `Cargo.lock` fixa as versões. `build.rs` usa o compilador de recursos do Windows SDK para incorporar ícone/metadados.
 
 Com Rust instalado, dentro desta pasta:
 
@@ -50,6 +58,8 @@ cargo clippy --all-targets --offline -- -D warnings
 cargo build --release --offline
 ```
 
-O executável recompilado fica em `target/release/skylab-rust.exe`. A transformação usa séries de Transversa de Mercator de Snyder, restritas à zona; testes incluem os vetores publicados pelo [PROJ](https://proj.org/en/stable/operations/projections/utm.html), ida/volta em várias zonas, hemisférios e latitudes, e comparação geométrica com os exemplos locais. Isso não substitui homologação geodésica nem validação em voo.
+O executável recompilado fica em `target/release/skylab-rust.exe`. Para construir também o instalador, execute `scripts/build.ps1`: primeiro ele compila o aplicativo, prepara o payload e depois gera `dist/SkyTEM-SkyLab-Setup.exe`. Requer Rust e Windows SDK com `rc.exe`. O modo `--test-root PASTA --no-open` permite testar o instalador com arquivos/atalhos isolados dentro de PASTA/SkyLab, sem modificar o registro do Windows ou atalhos pessoais. O desinstalador de teste exige também `--uninstall --test-root PASTA`.
 
-Consulte **VALIDACAO.md** para os resultados, limitações encontradas e decisões pendentes.
+A transformação usa séries de Transversa de Mercator de Snyder, restritas à zona; testes incluem os vetores publicados pelo [PROJ](https://proj.org/en/stable/operations/projections/utm.html), ida/volta em várias zonas, hemisférios e latitudes, e comparação geométrica com os exemplos locais. Isso não substitui homologação geodésica nem validação em voo.
+
+Consulte **VALIDACAO.md** para resultados e decisões pendentes, **IDENTIDADE.md** para a origem da marca e **REPOSITORIO.md** para histórico, continuidade no espaço de trabalho e migração para o servidor da empresa.

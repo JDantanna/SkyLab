@@ -4,3 +4,8 @@
 *.exe
 *.zip
 *.bundle
+/imports/
+/private/
+/local-data/
+*.mis
+*.kml
