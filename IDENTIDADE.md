@@ -1,3 +1,9 @@
+# Marca SkyLab aplicada — versão 0.1
+
+Por solicitação expressa do usuário, o ícone aprovado foi aplicado no aplicativo, cabeçalho, Sobre, instalador e executáveis. `assets/skylab-icon.svg` combina o caminho exato do S fornecido pela SkyTEM, um frasco de laboratório e uma linha de levantamento. `assets/app.ico` contém sete tamanhos: 16, 24, 32, 48, 64, 128 e 256 px. O desenho do S não foi redesenhado; apenas posição e escala uniforme foram aplicadas. A nova marca não muda a versão do produto.
+
+## Origem preservada
+
 # Identidade SkyTEM
 
 A marca atual é **assets/skytem-white.svg**, fornecida pelo usuário nesta revisão. O SVG foi copiado sem alterar os bytes, mantendo os traços brancos e o arco cinza. Ele é apresentado sobre o azul institucional no aplicativo, no instalador e no Sobre. Nenhuma marca foi redesenhada ou gerada por IA.

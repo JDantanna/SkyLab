@@ -22,6 +22,7 @@ translations.push(
 ['Não há transformação offline precisa disponível. Pode ser necessária uma grade de datum; nenhuma aproximação foi aplicada.','No accurate offline transformation is available. A datum grid may be required; no approximate transformation was applied.','Ingen nøjagtig offline-transformation er tilgængelig. Et datumgitter kan være påkrævet; ingen omtrentlig transformation er anvendt.'],
 ['Falha na transformação. Confira o sistema, a área de uso e as grades de datum necessárias.','Coordinate transformation failed. Check the CRS, area of use and required offline datum grids.','Koordinattransformation mislykkedes. Kontrollér koordinatsystem, anvendelsesområde og nødvendige offline-datumgitre.']
 );
+translations.push(['Adicionar arquivo','Add file','Tilføj fil'],['Idioma','Language','Sprog']);
 const translationIndex=new Map();for(const row of translations)for(const text of row)translationIndex.set(text,row);
 function tr(text){const row=translationIndex.get(text);return row?row[window.skyLocale==='pt-BR'?0:window.skyLocale==='da'?2:1]:text;}
 window.tr=tr;

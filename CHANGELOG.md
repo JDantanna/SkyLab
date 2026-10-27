@@ -37,3 +37,13 @@
 - Gravação pelo diálogo nativo, sem painel de downloads ou aviso de saída de página; removido Encerrar do Sobre.
 - Satélite opcional via Google Maps JavaScript API, condicionado à chave/conta da empresa. Configuração e falhas de conexão são tratadas; imagem real permanece sem validação por falta da chave.
 - Projetos com autoridades CRS usam formato de arquivo 2, mantendo a versão do produto 0.1 e a leitura dos projetos antigos.
+
+## 0.1 — revisão de seleção, atalhos, cabeçalho e marca
+
+- Versão mantida em 0.1 por confirmação expressa do usuário.
+- Corrigida referência inválida que interrompia o Ctrl+Z; regressão de excluir/restaurar e onze etapas de histórico cobertas por testes do manipulador real.
+- Shift seleciona todas as linhas do intervalo; espaço vazio limpa a seleção; mapa/lista permanecem sincronizados.
+- Adicionar arquivo substitui o rótulo quando há projeto aberto. A câmera enquadra a geometria importada, incluindo adição a projetos maiores.
+- Comandos de projeto à esquerda, consulta de atualização por ícone, idiomas por bandeiras, Sobre no nome SkyLab e exemplo no final de Ajuda.
+- Ícone aprovado aplicado no programa, instalador, janela nativa e executáveis.
+- Pesquisa de opções oficiais Google documentada, sem acesso a endpoints internos do site e sem criação de cobranças.

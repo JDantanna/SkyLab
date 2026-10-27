@@ -3,7 +3,7 @@
 - Este repositório contém o código e a marca autorizada para esta versão interna. Os levantamentos reais são confidenciais: não copiar para o repositório, não incluir em pacotes e não enviar a serviços externos.
 - Manter cálculos e validações geométricas em Rust. A interface e o instalador usam recursos locais; não adicionar telemetria. Por solicitação expressa do usuário, a camada de satélite Google é permitida somente após ativação/configuração pelo operador; o funcionamento vetorial deve permanecer offline.
 - A zona/hemisfério são explícitos. Não inferir datum por nome de arquivo nem transformar LineString em bloco automaticamente. Preservar todos os vértices MIS.
-- Usar assets/skytem-white.svg, fornecido pelo usuário, sobre fundo escuro. Não redesenhar nem gerar outra marca. Consultar IDENTIDADE.md.
+- Usar assets/skylab-icon.svg e assets/app.ico: marca SkyLab com o S original, frasco e linha, aprovada para aplicação pelo usuário. Preservar assets/skytem-white.svg como fonte do desenho do S. Consultar IDENTIDADE.md.
 - Para distribuir, executar scripts/build.ps1, testar o instalador em modo --test-root e verificar instalação/atualização/desinstalação preservando arquivos pessoais. Compilação é offline; Windows SDK fornece rc.exe para ícone/metadados.
 - Executar cargo clippy --all-targets --features installer --offline -- -D warnings depois que payload/SkyLab-Rust.exe tiver sido gerado.
 - Atualizar Cargo.toml, CHANGELOG.md e os relatórios de validação ao criar uma versão. A versão de registro do instalador vem de Cargo.toml.

@@ -2,7 +2,7 @@
 
 ## Abrir e trabalhar
 
-O idioma inicial de um perfil novo é English, independentemente do idioma do Windows. O seletor permite English, Português (Brasil) e Dansk; a escolha fica neste computador. Os projetos não mudam de idioma e os nomes das linhas não são traduzidos.
+O idioma inicial de um perfil novo é English, independentemente do idioma do Windows. O seletor por bandeira permite English, Português (Brasil) e Dansk; a escolha fica neste computador. Os projetos não mudam de idioma e os nomes das linhas não são traduzidos.
 
 O tutorial aparece no primeiro uso, destaca sete partes da interface e explica cada uma com uma janela e seta. Concluir impede a abertura automática nas próximas sessões. Fazer depois adia para uma próxima sessão. Ajuda → Iniciar tutorial permite refazê-lo. Preferências e conclusão do tutorial ficam no perfil local da janela, não no projeto.
 
@@ -14,9 +14,11 @@ Ao abrir cada arquivo, o diálogo de coordenadas sempre aparece antes de alterar
 
 É possível manter o sistema atual ou adotar o escolhido. Ao adicionar dados em outro sistema, os dados existentes são reprojetados antes da união; nunca se juntam coordenadas de sistemas diferentes apenas trocando o rótulo. Cancelar não altera o projeto. Falhas de transformação também preservam o projeto anterior.
 
+O cabeçalho apresenta SkyLab, Novo projeto, Salvar projeto e Exportar alinhados à esquerda. Clique em SkyLab para abrir Sobre. O ícone de duas setas consulta atualizações. Abrir exemplo fica no fim de Ajuda. O botão de arquivo passa de Selecionar arquivo a Adicionar arquivo quando um projeto está aberto; após cada importação, o mapa enquadra a geometria recém-importada.
+
 ## Seleção e edição
 
-Clique seleciona uma linha no mapa e na lista. Shift + clique acrescenta ou retira linhas da seleção. Ao selecionar no mapa, a lista revela a linha correspondente, inclusive limpando um filtro que a escondia. O destaque aparece em ambas as áreas.
+Clique seleciona uma linha no mapa e na lista. Shift + clique em outra linha seleciona todo o intervalo entre a primeira e a última, na ordem da lista, inclusive ao selecionar pelo mapa. Clicar no espaço vazio do mapa ou da lista limpa a seleção. Ao selecionar no mapa, a lista revela a linha correspondente, inclusive limpando um filtro que a escondia. O destaque aparece em ambas as áreas.
 
 Botão direito no mapa ou na lista abre ferramentas da seleção: enquadrar, inverter, recortar pelo bloco e excluir. Inverter, recortar e excluir atuam em todas as selecionadas em uma única operação de histórico. Nome, vértices, corte por distância e divisão são operações individuais e ficam indisponíveis com seleção múltipla.
 
@@ -53,3 +55,5 @@ As linhas são convertidas do CRS do projeto para longitude/latitude WGS84 em Ru
 Windows x64, .NET Framework 4.6.2+, WebView2 Runtime e Microsoft Visual C++ 2015–2022 x64 Runtime. Todos estão presentes nesta máquina. As bibliotecas e licenças PROJ são incluídas; QGIS não precisa estar instalado para usar o SkyLab. Grades adicionais são opcionais e dependem do datum.
 
 Instalador e desinstalador continuam preservando projetos, configurações e arquivos não pertencentes ao produto. Antes de atualizar, feche todas as instâncias de SkyLab. As revisões antigas podem estar abertas em outra janela; o programa não as encerra à força.
+
+Consulte GOOGLE-MAPS-CUSTOS.md para as franquias oficiais e limitações de uso gratuito. A marca aplicada no programa, instalador e executáveis é o S original com laboratório e linha aprovado pelo usuário.

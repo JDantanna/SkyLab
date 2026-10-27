@@ -99,7 +99,7 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             ("GET","/window.js")=>(200,"text/javascript; charset=utf-8",include_bytes!("../../web/window.js").to_vec()),
             ("GET","/setup.css")=>(200,"text/css; charset=utf-8",include_bytes!("../../installer/setup.css").to_vec()),
             ("GET","/setup.js")=>(200,"text/javascript; charset=utf-8",include_bytes!("../../installer/setup.js").to_vec()),
-            ("GET","/brand.svg")=>(200,"image/svg+xml",include_bytes!("../../assets/skytem-white.svg").to_vec()),
+            ("GET","/brand.svg")=>(200,"image/svg+xml",include_bytes!("../../assets/skylab-icon.svg").to_vec()),
             ("GET","/progress")=>(200,"application/json",json!(*progress.lock().unwrap()).to_string().into_bytes()),
             ("GET","/state")=>(200,"application/json",json!({"version":updates::display_version(),"path":options.root,"installed":options.installed(),"uninstall":uninstall,"test":options.test_mode}).to_string().into_bytes()),
             ("POST",route)if["/install","/remove","/finish"].contains(&route)=>{

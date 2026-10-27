@@ -1,6 +1,8 @@
 $ErrorActionPreference = 'Stop'
 Push-Location (Split-Path -Parent $PSScriptRoot)
 try {
+    node --test tests/interactions.cjs
+    if ($LASTEXITCODE -ne 0) { throw 'Testes de interação falharam.' }
     cargo test --offline
     if ($LASTEXITCODE -ne 0) { throw 'Testes falharam.' }
     cargo build --release --offline --bin skylab-rust

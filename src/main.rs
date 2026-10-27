@@ -207,7 +207,7 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 let mut reply = String::new();
                 stream.take(4096).read_to_string(&mut reply)?;
                 if reply.contains("skytem-skylab-local-planner")
-                    && reply.contains("native-window-v2")
+                    && reply.contains("native-window-v3")
                 {
                     if !args.iter().any(|s| s == "--no-open") {
                         let mut activate = std::net::TcpStream::connect(("127.0.0.1", port))?;
@@ -222,7 +222,7 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                     return Err("Outra revisão do SkyLab está aberta. Encerre a revisão anterior antes de abrir esta.".into());
                 }
             }
-            return Err(format!("A porta {port} está ocupada por outro programa. Inicie o SkyLab com --port e outra porta.").into());
+            return Err("Não foi possível iniciar esta revisão do SkyLab. Feche as outras janelas do programa e tente novamente.".into());
         }
         Err(e) => return Err(e.into()),
     };
@@ -281,7 +281,7 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let mut shutdown = false;
         if req.method().as_str() == "GET" && req.url() == "/brand.svg" {
             let mut response = tiny_http::Response::from_data(
-                include_bytes!("../assets/skytem-white.svg").to_vec(),
+                include_bytes!("../assets/skylab-icon.svg").to_vec(),
             );
             response.add_header(
                 tiny_http::Header::from_bytes("Content-Type", "image/svg+xml").unwrap(),
@@ -346,7 +346,7 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 200,
                 "text/plain",
                 format!(
-                    "skytem-skylab-local-planner native-window-v2 {}",
+                    "skytem-skylab-local-planner native-window-v3 {}",
                     updates::display_version()
                 ),
             ),
@@ -364,6 +364,31 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 200,
                 "text/javascript; charset=utf-8",
                 include_str!("../web/app.js").to_string(),
+            ),
+            ("GET", "/interactions.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/interactions.js").into(),
+            ),
+            ("GET", "/controls.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/controls.js").into(),
+            ),
+            ("GET", "/flags/en.svg") => (
+                200,
+                "image/svg+xml",
+                include_str!("../assets/flags/en.svg").into(),
+            ),
+            ("GET", "/flags/pt-BR.svg") => (
+                200,
+                "image/svg+xml",
+                include_str!("../assets/flags/pt-BR.svg").into(),
+            ),
+            ("GET", "/flags/da.svg") => (
+                200,
+                "image/svg+xml",
+                include_str!("../assets/flags/da.svg").into(),
             ),
             ("GET", "/workspace.js") => (
                 200,

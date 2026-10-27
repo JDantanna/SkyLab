@@ -4,7 +4,7 @@ Primeira versão utilizável, local, do fluxo de missões do SkyLab para helicó
 
 ## Instalar e abrir
 
-Execute **SkyTEM-SkyLab-Setup-0.1-revisao.exe**, entregue junto ao pacote. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
+Execute **SkyTEM-SkyLab-Setup-0.1-layout.exe**, entregue junto ao pacote. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
 
 Abra **SkyLab** pelo menu Iniciar ou pelo atalho. A janela Windows usa WebView2 e controles integrados ao cabeçalho azul, sem a moldura do navegador. A versão exibida é **0.1** (0.1.0 no pacote Rust). Antes de qualquer avanço de versão, será solicitada uma decisão explícita do usuário.
 
@@ -55,7 +55,7 @@ cargo clippy --all-targets --offline -- -D warnings
 cargo build --release --offline
 ```
 
-O executável recompilado fica em `target/release/skylab-rust.exe`. Para construir também o instalador, execute `scripts/build.ps1`: primeiro ele compila o aplicativo, prepara o payload e depois gera `dist/SkyTEM-SkyLab-Setup.exe`. Requer Rust, Windows SDK com `rc.exe` e o compilador .NET Framework. O modo `--test-root PASTA --no-open` permite testar o instalador com arquivos/atalhos isolados dentro de PASTA/SkyLab, sem modificar o registro do Windows ou atalhos pessoais. O desinstalador de teste exige também `--uninstall --test-root PASTA`.
+O executável recompilado fica em `target/release/skylab-rust.exe`. Para construir também o instalador, execute `scripts/build.ps1`: primeiro ele compila o aplicativo, prepara o payload e depois gera `dist/SkyTEM-SkyLab-Setup.exe`. Requer Rust, Node.js 20+ para os testes de interação, Windows SDK com `rc.exe` e o compilador .NET Framework. O modo `--test-root PASTA --no-open` permite testar o instalador com arquivos/atalhos isolados dentro de PASTA/SkyLab, sem modificar o registro do Windows ou atalhos pessoais. O desinstalador de teste exige também `--uninstall --test-root PASTA`.
 
 WGS84/UTM usa séries de Transversa de Mercator de Snyder, restritas à zona; os demais sistemas usam PROJ offline com validação de grades. Os testes incluem os vetores publicados pelo [PROJ](https://proj.org/en/stable/operations/projections/utm.html), ida/volta em várias zonas, hemisférios e latitudes, e comparação geométrica com os exemplos locais. Isso não substitui homologação geodésica nem validação em voo.
 
@@ -66,3 +66,5 @@ O botão **Checar atualização** consulta uma fonte configurável. Enquanto o s
 
 
 As licenças das bibliotecas distribuídas são instaladas como `THIRD-PARTY-NOTICES.txt`. A camada PROJ não requer QGIS instalado. A imagem `tutorial-0.1.png` mostra a revisão atual da interface com o tutorial.
+
+A revisão de layout aplica a nova marca SkyLab, organiza os comandos à esquerda, abre Sobre pelo nome, usa bandeiras para idiomas, move o exemplo para Ajuda e corrige o Ctrl+Z. Shift seleciona intervalos completos. Consulte GOOGLE-MAPS-CUSTOS.md para a pesquisa solicitada sobre gratuidade.

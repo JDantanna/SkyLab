@@ -112,3 +112,14 @@ O instalador final 0.1 também passou por instalação, reparo, substituição d
 - O pacote final passou novamente pelo ciclo completo de instalação, reparo e desinstalação em pasta isolada, com conferência do hash do aplicativo e preservação de projeto e configuração. A remoção do próprio desinstalador aguarda bloqueios transitórios do Windows por até 30 segundos.
 - A versão final foi conferida pela interface incorporada: total 41,28 km no exemplo, Sobre sem Encerrar, troca inglês/português e versão 0.1 corretamente traduzida. A prévia tutorial-0.1.png mostra o conteúdo da interface, sem representar a moldura nativa.
 - Nesta rodada, as novas janelas iniciadas pelo ambiente de execução não ficaram disponíveis para inspeção na área de trabalho. A janela C# compila com avisos como erros; a inspeção interativa do novo diálogo Salvar do Windows permanece pendente. Não foram encerradas as janelas de trabalho do usuário.
+
+## Revisão de layout, seleção e marca — produto 0.1
+
+- Confirmação explícita do usuário: continuar na versão 0.1.
+- 37 testes Rust e 5 testes JavaScript passaram (42 ao todo). O conjunto JavaScript executa o manipulador real de Ctrl+Z e os métodos reais de histórico/importação, com ambiente DOM de teste: exclusão/restauração de geometria, seleção e câmera; onze exclusões/desfazer/refazer; ramificação; limite de 30 estados; enquadramento exclusivo da geometria adicionada.
+- Causa da falha de Ctrl+Z: referência inválida `tour-layer.hidden` no código do atalho. Corrigida para leitura explícita do elemento e protegida pelo teste de regressão.
+- Conferência da interface com o exemplo fictício: Shift da primeira à quinta linha selecionou as cinco; excluir reduziu 23 para 18 e Ctrl+Z restaurou 23 e a seleção de cinco; clique em espaço vazio limpou todas; clique no mapa selecionou L100300 na lista. Rótulo Adicionar arquivo, bandeiras, troca para português, Sobre pelo nome e exemplo no fim de Ajuda verificados.
+- Novo ícone conferido no aplicativo e instalador. Verificação binária confirmou as sete imagens ICO dentro de ambos os executáveis; o caminho do S é idêntico ao SVG original.
+- Ciclo do instalador final passou em pasta isolada: instalação, reparo, hash do payload, atalhos de teste, desinstalação com remoção do próprio arquivo e preservação do projeto/configuração. Nenhuma instalação pessoal foi substituída durante os testes.
+- Clippy passou com avisos como erros. As capturas layout-0.1.png e instalador-layout-0.1.png mostram o conteúdo das interfaces, sem representar a moldura da janela nativa.
+- Pesquisa Google documentada em GOOGLE-MAPS-CUSTOS.md, com fontes oficiais. Sem chave fornecida, sem imagens reais consultadas e sem alteração de faturamento. A integração de satélite real continua dependendo da configuração da empresa.
