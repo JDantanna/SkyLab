@@ -1,6 +1,16 @@
 # Histórico de versões
 
-## 0.2.0 — 27/10/2026
+## 0.1 — revisão institucional (sem avanço de versão)
+
+- Versão atual mantida em 0.1 por orientação expressa do usuário; próximos avanços exigem pergunta e aprovação.
+- SVG branco fornecido pelo usuário substitui a marca raster na interface e no ícone.
+- Aplicativo e instalador sem slogans; layout direto, com barras de rolagem azuis.
+- Janela Windows própria em WebView2, sem a moldura cinza do navegador, com botões nativos integrados ao azul.
+- Instalador com execução em segundo plano, porcentagem e etapas informadas pela operação real.
+- Botão Checar atualização com fonte HTTPS ou arquivo configurável; ausência de fonte informada explicitamente.
+
+
+## Marcação preliminar 0.2 — preservada no histórico, sem aprovação corrente
 
 - Logo SkyTEM original recuperada do About do SkyLab, sem executar o programa antigo; identidade azul/cinza aplicada ao aplicativo e ao instalador.
 - Tela Sobre, ícone Windows e informações de versão incorporados nos executáveis.

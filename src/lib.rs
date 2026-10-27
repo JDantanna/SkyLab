@@ -2,6 +2,7 @@
 use serde::{Deserialize, Serialize};
 pub mod desktop;
 pub mod installation;
+pub mod updates;
 pub type Result<T> = std::result::Result<T, String>;
 pub type Point = [f64; 2];
 const EPS: f64 = 1e-7;

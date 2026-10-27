@@ -82,3 +82,21 @@ O código foi organizado em repositório Git local com versões marcadas e uma c
 
 Não foram feitas publicações, uploads de levantamentos, modificações do navegador de bordo ou integração com sistemas de voo.
 
+
+## Revisão institucional atual — versão mantida em 0.1
+
+A marcação preliminar 0.2 deixou de ser a versão corrente por instrução expressa do usuário. A aplicação, o instalador e o registro exibem 0.1. Novos avanços exigem uma pergunta e aprovação explícita; esse procedimento está registrado em AGENTS.md.
+
+O instalador foi simplificado para nome, logo, destino, opções e etapas. Os slogans e o painel promocional foram removidos. A marca agora é o SVG branco fornecido pelo usuário, preservado sem alterações. As barras de rolagem, seleção de campos e controles seguem a paleta azul.
+
+A janela do navegador foi substituída por um host Windows WebView2 com FormBorderStyle.None. Os botões de minimizar, maximizar/restaurar e fechar são controles nativos desenhados no azul, fora da superfície dos diálogos HTML. O adaptador foi compilado com avisos tratados como erros. A janela de teste foi aberta no Windows, mas a conferência manual de minimizar/maximizar não foi concluída: ela estava minimizada e a automação foi interrompida por interação no computador. Essa conferência visual permanece pendente; a implementação não usa a moldura cinza do Edge.
+
+**33 testes automatizados passaram**: 23 de geometria e formatos, 1 da API/interface, 5 de instalação e 4 de consulta de atualização. Também passou a análise estática com avisos tratados como erros. O progresso é fornecido pela operação Rust em segundo plano; a interface foi observada em 'Copiando aplicativo — 35%' e depois em 'Instalação concluída'. Não foi acrescentada espera artificial para simular uma instalação.
+
+O botão Checar atualização foi acionado na interface. Exibiu versão instalada 0.1 e fonte não configurada. Os testes cobrem comparação numérica de versões, manifesto local, ausência de fonte e rejeição de endereços inadequados. Nenhum servidor corporativo foi inventado ou consultado. A consulta HTTPS está implementada com validação de certificados, limite de tamanho e tempo; a integração com o servidor real depende de seu endereço e acesso.
+
+A instalação piloto no registro real do usuário, a assinatura corporativa e a validação operacional a bordo continuam pendentes. O WebView2 Runtime é pré-requisito para a janela Windows e já estava disponível neste computador. Os arquivos reais de levantamento continuam fora do repositório e dos pacotes.
+
+Na retomada da verificação, a janela real foi identificada como SkyLab, hospedada por SkyLab.Window.exe. A acessibilidade do Windows confirmou os controles nativos Minimizar, Maximizar/restaurar e Fechar habilitados, inclusive com o diálogo Sobre aberto e exibindo a versão 0.1. A captura de imagem nativa continuou retornando timeout, e a tentativa de interação automatizada foi bloqueada por entrada do usuário. A aplicação foi deixada aberta para avaliação; não foi forçado foco nem fechamento da janela.
+
+O instalador final 0.1 também passou por instalação, reparo, substituição de uma marcação preliminar 0.2 por 0.1, conferência do hash do aplicativo copiado e desinstalação completa em pasta isolada, preservando projeto fictício e configuração de atualização.

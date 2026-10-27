@@ -96,7 +96,7 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let port: u16 = if let Some(i) = args.iter().position(|s| s == "--port") {
         args.get(i + 1).ok_or("Falta porta")?.parse()?
     } else {
-        8777
+        8787
     };
     let listener = match TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)) {
         Ok(listener) => listener,
@@ -111,11 +111,20 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 )?;
                 let mut reply = String::new();
                 stream.take(4096).read_to_string(&mut reply)?;
-                if reply.contains("skytem-skylab-local-planner") {
+                if reply.contains("skytem-skylab-local-planner")
+                    && reply.contains("native-window-v1")
+                {
                     if !args.iter().any(|s| s == "--no-open") {
-                        desktop::open(&format!("http://127.0.0.1:{port}"));
+                        let mut activate = std::net::TcpStream::connect(("127.0.0.1", port))?;
+                        write!(
+                            activate,
+                            "POST /activate HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                        )?;
                     }
                     return Ok(());
+                }
+                if reply.contains("skytem-skylab-local-planner") {
+                    return Err("Outra revisão do SkyLab está aberta. Encerre a revisão anterior antes de abrir esta.".into());
                 }
             }
             return Err(format!("A porta {port} está ocupada por outro programa. Inicie o SkyLab com --port e outra porta.").into());
@@ -128,14 +137,23 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!(
         "SkyLab Rust • aplicativo local\nAbra {origin}\nMantenha esta janela aberta. Ctrl+C encerra.\nValide datum, projeção e missão antes de uso em voo."
     );
-    if !args.iter().any(|s| s == "--no-open") {
-        desktop::open(&origin);
-    }
+    let mut window = if !args.iter().any(|s| s == "--no-open") {
+        desktop::open(&origin, false)
+    } else {
+        None
+    };
     let mut last_seen = std::time::Instant::now();
     let mut page_seen = false;
     loop {
+        if window
+            .as_mut()
+            .is_some_and(|child| child.try_wait().ok().flatten().is_some())
+        {
+            break;
+        }
         let Some(mut req) = server.recv_timeout(std::time::Duration::from_secs(1))? else {
-            if last_seen.elapsed().as_secs() > if page_seen { 90 } else { 600 } {
+            if window.is_none() && last_seen.elapsed().as_secs() > if page_seen { 90 } else { 600 }
+            {
                 break;
             }
             continue;
@@ -166,13 +184,77 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             continue;
         }
         let mut shutdown = false;
+        if req.method().as_str() == "GET" && req.url() == "/brand.svg" {
+            let mut response = tiny_http::Response::from_data(
+                include_bytes!("../assets/skytem-white.svg").to_vec(),
+            );
+            response.add_header(
+                tiny_http::Header::from_bytes("Content-Type", "image/svg+xml").unwrap(),
+            );
+            let _ = req.respond(response);
+            continue;
+        }
         let (status, mime, body) = match (req.method().as_str(), req.url()) {
+            ("POST", "/activate") => {
+                let child = desktop::open(&origin, false);
+                if window.is_none() {
+                    window = child;
+                }
+                (200, "application/json", "{\"ok\":true}".into())
+            }
+            ("GET", "/window.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/window.js").into(),
+            ),
+            ("GET", "/window.css") => (
+                200,
+                "text/css; charset=utf-8",
+                include_str!("../web/window.css").into(),
+            ),
+            ("GET", "/updates/check") => match updates::check() {
+                Ok(check) => (
+                    200,
+                    "application/json",
+                    json!({"ok":true,"data":check}).to_string(),
+                ),
+                Err(e) => (
+                    400,
+                    "application/json",
+                    json!({"ok":false,"error":e}).to_string(),
+                ),
+            },
+            ("POST", "/updates/open") => match updates::check() {
+                Ok(check) if check.status == "available" && check.download_url.is_some() => {
+                    let url = check.download_url.unwrap();
+                    #[cfg(windows)]
+                    {
+                        let _ =
+                            desktop::hidden(std::process::Command::new("explorer.exe").arg(url))
+                                .spawn();
+                    }
+                    (200, "application/json", "{\"ok\":true}".into())
+                }
+                _ => (
+                    400,
+                    "application/json",
+                    "{\"ok\":false,\"error\":\"Nenhum endereço de atualização disponível.\"}"
+                        .into(),
+                ),
+            },
             ("GET", "/heartbeat") => {
                 page_seen = true;
                 last_seen = std::time::Instant::now();
                 (200, "application/json", "{\"ok\":true}".into())
             }
-            ("GET", "/identity") => (200, "text/plain", "skytem-skylab-local-planner".into()),
+            ("GET", "/identity") => (
+                200,
+                "text/plain",
+                format!(
+                    "skytem-skylab-local-planner native-window-v1 {}",
+                    updates::display_version()
+                ),
+            ),
             ("POST", "/shutdown") => {
                 shutdown = true;
                 (200, "application/json", "{\"ok\":true}".into())
@@ -180,7 +262,8 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             ("GET", "/") => (
                 200,
                 "text/html; charset=utf-8",
-                include_str!("../web/index.html").replace("0.2.0", env!("CARGO_PKG_VERSION")),
+                include_str!("../web/index.html")
+                    .replace("__VERSION__", updates::display_version()),
             ),
             ("GET", "/app.js") => (
                 200,

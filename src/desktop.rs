@@ -1,6 +1,6 @@
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
-use std::process::Command;
+use std::process::{Child, Command};
 
 pub fn hidden(cmd: &mut Command) -> &mut Command {
     #[cfg(windows)]
@@ -10,32 +10,80 @@ pub fn hidden(cmd: &mut Command) -> &mut Command {
     cmd
 }
 
-/// Open the existing local UI in a separate Edge application window, with browser fallback.
-pub fn open(url: &str) {
+/// Materialize the pinned Microsoft WebView2 SDK and our native window in a per-build cache.
+#[cfg(windows)]
+pub fn host_command() -> crate::Result<Command> {
+    use std::{
+        fs,
+        hash::{Hash, Hasher},
+        path::PathBuf,
+    };
+    let exe = include_bytes!(concat!(env!("OUT_DIR"), "/SkyLab.Window.exe"));
+    let mut hash = std::collections::hash_map::DefaultHasher::new();
+    exe.hash(&mut hash);
+    let root = std::env::var_os("SKYLAB_NATIVE_CACHE")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| std::env::temp_dir().join("SkyTEM-SkyLab-Window"))
+        .join(format!("{:x}", hash.finish()));
+    fs::create_dir_all(&root).map_err(|e| e.to_string())?;
+    let files: [(&str, &[u8]); 7] = [
+        ("SkyLab.Window.exe", exe),
+        (
+            "Microsoft.Web.WebView2.Core.dll",
+            include_bytes!("../native/vendor/webview2/Microsoft.Web.WebView2.Core.dll"),
+        ),
+        (
+            "Microsoft.Web.WebView2.WinForms.dll",
+            include_bytes!("../native/vendor/webview2/Microsoft.Web.WebView2.WinForms.dll"),
+        ),
+        (
+            "WebView2Loader.dll",
+            include_bytes!("../native/vendor/webview2/WebView2Loader.dll"),
+        ),
+        ("app.ico", include_bytes!("../assets/app.ico")),
+        (
+            "LICENSE-WebView2.txt",
+            include_bytes!("../native/vendor/webview2/LICENSE.txt"),
+        ),
+        (
+            "NOTICE-WebView2.txt",
+            include_bytes!("../native/vendor/webview2/NOTICE.txt"),
+        ),
+    ];
+    for (name, bytes) in files {
+        let file = root.join(name);
+        if fs::symlink_metadata(&file).is_ok_and(|m| m.file_type().is_symlink()) {
+            return Err("Arquivo de janela foi substituído por link.".into());
+        }
+        if fs::read(&file).ok().as_deref() != Some(bytes) {
+            fs::write(&file, bytes).map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(Command::new(root.join("SkyLab.Window.exe")))
+}
+
+/// Open a real WebView2 window, whose native controls are integrated into the page header.
+pub fn open(url: &str, setup: bool) -> Option<Child> {
     #[cfg(windows)]
     {
-        for env in ["ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA"] {
-            if let Some(root) = std::env::var_os(env) {
-                let edge =
-                    std::path::PathBuf::from(root).join("Microsoft/Edge/Application/msedge.exe");
-                if edge.is_file()
-                    && hidden(
-                        Command::new(edge)
-                            .arg(format!("--app={url}"))
-                            .arg("--window-size=1380,920"),
-                    )
-                    .spawn()
-                    .is_ok()
-                {
-                    return;
-                }
+        let result = host_command().and_then(|mut command| {
+            command.arg(url);
+            if setup {
+                command.arg("setup");
+            }
+            hidden(&mut command).spawn().map_err(|e| e.to_string())
+        });
+        match result {
+            Ok(child) => Some(child),
+            Err(e) => {
+                show_error(&e);
+                None
             }
         }
-        let _ = hidden(Command::new("explorer.exe").arg(url)).spawn();
     }
     #[cfg(not(windows))]
     {
-        let _ = Command::new("xdg-open").arg(url).spawn();
+        Command::new("xdg-open").arg(url).spawn().ok()
     }
 }
 

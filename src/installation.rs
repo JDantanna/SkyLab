@@ -98,7 +98,7 @@ fn run_script(script: &str, o: &Options) -> Result<()> {
             Command::new("powershell.exe")
                 .args(["-NoProfile", "-NonInteractive", "-Command", script])
                 .env("SKYLAB_INSTALL_ROOT", &o.root)
-                .env("SKYLAB_VERSION", VERSION)
+                .env("SKYLAB_VERSION", crate::updates::display_version())
                 .env("SKYLAB_DESKTOP", if o.desktop { "1" } else { "0" })
                 .env("SKYLAB_TEST_MODE", if o.test_mode { "1" } else { "0" }),
         )
@@ -119,11 +119,21 @@ fn run_script(script: &str, o: &Options) -> Result<()> {
     }
 }
 pub fn install(o: &Options, app: &[u8], setup: &[u8]) -> Result<()> {
+    install_with_progress(o, app, setup, |_, _| {})
+}
+pub fn install_with_progress<F: Fn(&str, u8)>(
+    o: &Options,
+    app: &[u8],
+    setup: &[u8],
+    progress: F,
+) -> Result<()> {
+    progress("Verificando instalação", 5);
     safe_root(o, false)?;
     check_app_closed(o)?;
     if !app.starts_with(b"MZ") || !setup.starts_with(b"MZ") {
         return Err("Pacote de instalação inválido.".into());
     }
+    progress("Preparando pasta", 15);
     fs::create_dir_all(&o.root).map_err(err)?;
     // Ownership is recorded before copying so an interrupted installation can be repaired.
     let manifest = Manifest {
@@ -139,6 +149,7 @@ pub fn install(o: &Options, app: &[u8], setup: &[u8]) -> Result<()> {
     let target = o.root.join(APP);
     let new = o.root.join("SkyLab-Rust.new.exe");
     let previous = o.root.join("SkyLab-Rust.previous.exe");
+    progress("Copiando aplicativo", 35);
     fs::write(&new, app).map_err(err)?;
     if previous.exists() {
         fs::remove_file(&previous).map_err(err)?;
@@ -153,6 +164,7 @@ pub fn install(o: &Options, app: &[u8], setup: &[u8]) -> Result<()> {
         }
         return Err(err(e));
     }
+    progress("Preparando desinstalador", 60);
     let uninstaller = o.root.join(UNINSTALL);
     let unew = o.root.join("Uninstall.new.exe");
     fs::write(&unew, setup).map_err(err)?;
@@ -161,13 +173,21 @@ pub fn install(o: &Options, app: &[u8], setup: &[u8]) -> Result<()> {
             .map_err(|_| "Feche a janela de desinstalação antes de atualizar.".to_string())?;
     }
     fs::rename(unew, uninstaller).map_err(err)?;
+    progress("Registrando aplicativo e atalhos", 80);
     run_script(include_str!("../scripts/register.ps1"),o).map_err(|e|format!("Arquivos instalados, mas o registro não terminou. Execute o instalador novamente para reparar. {e}"))?;
+    progress("Instalação concluída", 100);
     Ok(())
 }
 pub fn uninstall(o: &Options) -> Result<()> {
+    uninstall_with_progress(o, |_, _| {})
+}
+pub fn uninstall_with_progress<F: Fn(&str, u8)>(o: &Options, progress: F) -> Result<()> {
+    progress("Verificando instalação", 5);
     safe_root(o, true)?;
     check_app_closed(o)?;
+    progress("Removendo atalhos e registro", 25);
     run_script(include_str!("../scripts/unregister.ps1"), o)?;
+    progress("Removendo arquivos do aplicativo", 50);
     for name in [
         APP,
         "SkyLab-Rust.previous.exe",
@@ -198,8 +218,10 @@ pub fn uninstall(o: &Options) -> Result<()> {
     } else if own.exists() {
         fs::remove_file(own).map_err(err)?;
     }
+    progress("Finalizando remoção", 90);
     fs::remove_file(o.root.join("installation.json")).map_err(err)?;
     let _ = fs::remove_dir(&o.root); // Keep any user-created or unknown files.
+    progress("Remoção concluída", 100);
     Ok(())
 }
 

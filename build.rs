@@ -6,7 +6,48 @@ fn main() {
     }
     let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
     let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+    println!("cargo:rerun-if-changed=native/Host.cs");
+    println!("cargo:rerun-if-changed=native/vendor/webview2");
+    let sdk = root.join("native/vendor/webview2");
+    let win = |path: PathBuf| path.to_string_lossy().replace('/', "\\");
+    let csc = PathBuf::from(env::var_os("WINDIR").unwrap())
+        .join("Microsoft.NET/Framework64/v4.0.30319/csc.exe");
+    let output = Command::new(csc)
+        .args([
+            "/nologo",
+            "/target:winexe",
+            "/platform:x64",
+            "/optimize+",
+            "/codepage:65001",
+            "/warnaserror+",
+        ])
+        .arg(format!("/out:{}", win(out.join("SkyLab.Window.exe"))))
+        .arg(format!("/win32icon:{}", win(root.join("assets/app.ico"))))
+        .args([
+            "/reference:System.Windows.Forms.dll",
+            "/reference:System.Drawing.dll",
+            "/reference:System.Net.Http.dll",
+            "/reference:System.Core.dll",
+        ])
+        .arg(format!(
+            "/reference:{}",
+            win(sdk.join("Microsoft.Web.WebView2.Core.dll"))
+        ))
+        .arg(format!(
+            "/reference:{}",
+            win(sdk.join("Microsoft.Web.WebView2.WinForms.dll"))
+        ))
+        .arg(win(root.join("native/Host.cs")))
+        .output()
+        .expect("Compilador .NET Framework necessário");
+    assert!(
+        output.status.success(),
+        "Falha ao compilar a janela WebView2: {} {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
     let version = env::var("CARGO_PKG_VERSION").unwrap();
+    let display_version = version.strip_suffix(".0").unwrap_or(&version);
     let numbers = version
         .split('.')
         .map(|s| s.parse::<u16>().unwrap_or(0).to_string())
@@ -32,9 +73,9 @@ BEGIN
   BEGIN
    VALUE "CompanyName", "SkyTEM - uso interno\0"
    VALUE "FileDescription", "SkyTEM SkyLab\0"
-   VALUE "FileVersion", "{version}\0"
+   VALUE "FileVersion", "{display_version}\0"
    VALUE "ProductName", "SkyTEM SkyLab\0"
-   VALUE "ProductVersion", "{version}\0"
+   VALUE "ProductVersion", "{display_version}\0"
   END
  END
  BLOCK "VarFileInfo"

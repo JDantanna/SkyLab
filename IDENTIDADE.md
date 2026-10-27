@@ -1,19 +1,9 @@
 # Identidade SkyTEM
 
-A logo foi extraída **localmente e sem executar o binário antigo**, do recurso Windows `RT_RCDATA / TFORMABOUT` do SkyLab contido no pacote original fornecido pelo usuário. É o JPEG da própria tela About, com dimensões de 116 × 54 pixels. O pacote antigo e os demais recursos proprietários não são incluídos neste repositório.
+A marca atual é **assets/skytem-white.svg**, fornecida pelo usuário nesta revisão. O SVG foi copiado sem alterar os bytes, mantendo os traços brancos e o arco cinza. Ele é apresentado sobre o azul institucional no aplicativo, no instalador e no Sobre. Nenhuma marca foi redesenhada ou gerada por IA.
 
-`assets/skytem-logo.jpg` preserva os bytes do JPEG original. Ele aparece no cabeçalho do aplicativo, na tela Sobre e no instalador. O ícone Windows em `assets/app.ico` é uma conversão de formato da mesma marca, centralizada sobre fundo branco, sem redesenho. O recurso raster original tem resolução limitada; um arquivo vetorial oficial permitirá melhorar a nitidez em telas de alta densidade.
+O ícone Windows é uma rasterização desse mesmo SVG sobre azul-escuro. O JPEG recuperado anteriormente do About fica apenas como referência histórica; não é mais usado pela interface.
 
-Paleta aplicada, derivada do azul-escuro e dos cinzas presentes na marca:
+Paleta: azul principal #0E2455, ações #173E7C, contornos e linhas #557EAF, superfícies #F3F6FB/#FFFFFF. Os controles da janela são desenhados sobre o mesmo azul. As barras de rolagem usam tons azuis, em vez da aparência padrão do Windows. O âmbar distingue a linha selecionada na prévia.
 
-| Uso | Cor |
-|---|---|
-| Cabeçalhos e área de marca | #0E2455 |
-| Ações principais | #173E7C |
-| Linhas e destaques de navegação | #557EAF |
-| Cinzas e fundos | #E9EDF4 / #F3F5F8 |
-| Superfícies | #FFFFFF |
-
-O âmbar é reservado à seleção de linha/sentido para manter distinção visual da malha azul. Não é apresentado como cor institucional. Aplicativo e instalador compartilham a mesma folha de estilos base.
-
-O uso da marca foi solicitado para este projeto interno. Os executáveis são versões de desenvolvimento e não possuem assinatura digital corporativa.
+A interface é institucional: nome, logo e comandos de operação. Foram retirados slogans, chamadas promocionais e o painel decorativo do instalador.

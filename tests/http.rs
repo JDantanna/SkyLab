@@ -44,6 +44,10 @@ fn local_server_serves_ui_and_validates_api() {
     assert!(ui.starts_with("HTTP/1.1 200"));
     assert!(ui.contains("Content-Security-Policy:"));
     assert!(ui.contains("Gerar linhas no bloco"));
+    let updates = call(port, "GET", "/updates/check", "", None);
+    assert!(updates.starts_with("HTTP/1.1 200"));
+    assert!(updates.contains("not_configured"));
+    assert!(updates.contains("0.1"));
     let js = call(port, "GET", "/app.js", "", None);
     assert!(js.starts_with("HTTP/1.1 200"));
     assert!(js.contains("function commit"));

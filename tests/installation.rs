@@ -88,6 +88,27 @@ fn invalid_payload_does_not_create_installation() {
 }
 
 #[test]
+fn install_progress_finishes_only_after_files_and_shortcuts_exist() {
+    let (parent, o) = temp();
+    let percents = std::cell::RefCell::new(Vec::new());
+    installation::install_with_progress(&o, b"MZ-test-app", b"MZ-test-setup", |_, percent| {
+        percents.borrow_mut().push(percent);
+        if percent == 100 {
+            assert!(o.root.join(APP).is_file());
+            assert!(o.root.join("test-registration.json").is_file());
+            assert!(o.root.join("test-shortcuts/SkyLab.lnk").is_file());
+        }
+    })
+    .unwrap();
+    let steps = percents.borrow();
+    assert_eq!(steps.last(), Some(&100));
+    assert!(steps.windows(2).all(|s| s[0] <= s[1]));
+    drop(steps);
+    installation::uninstall(&o).unwrap();
+    fs::remove_dir(parent).unwrap();
+}
+
+#[test]
 fn running_application_blocks_update_and_uninstall_before_registration_changes() {
     use std::io::{BufRead, BufReader};
     use std::process::{Command, Stdio};

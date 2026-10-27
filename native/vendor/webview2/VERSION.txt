@@ -1,0 +1,4 @@
+Microsoft.Web.WebView2 SDK 1.0.4314.35
+Source: https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/1.0.4314.35/microsoft.web.webview2.1.0.4314.35.nupkg
+Selected files: lib/net462/Microsoft.Web.WebView2.Core.dll; lib/net462/Microsoft.Web.WebView2.WinForms.dll; runtimes/win-x64/native/WebView2Loader.dll.
+Original LICENSE.txt and NOTICE.txt retained.
