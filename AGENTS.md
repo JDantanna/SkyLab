@@ -11,5 +11,5 @@
 - Os avanços seguem 0.1, 0.2, 0.3; não saltar para 1.0 por iniciativa própria.
 - Interface institucional: nome, marca e comandos diretos. Não incluir slogans, chamadas de venda ou mensagens promocionais. Usar janela WebView2 própria com controles integrados; não voltar ao Edge em modo aplicativo.
 - Guardar artefatos em dist/ ou como entregas locais; não versionar executáveis, pastas temporárias, payload ou levantamentos.
-- Histórico local em main, com tags de versões testadas. O destino remoto de hospedagem ainda não foi definido. Não afirmar que existe hospedagem ou atualização automática no GPT.
+- Histórico em main, com remoto autorizado https://github.com/JDantanna/SkyLab. Atualizações consultam Releases desse repositório; tags sozinhas não distribuem instaladores. Não afirmar que existe atualização automática no GPT.
 - Resultados precisam de validação operacional no navegador de bordo antes de uso em voo. Não apresentar testes de software como homologação aeronáutica.

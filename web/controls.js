@@ -8,3 +8,9 @@ document.addEventListener('pointerdown',e=>{if(!e.target.closest('.language-cont
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLanguages();});
 const demoAction=$('demo').onclick;$('demo').onclick=()=>{$('help-dialog').close();demoAction();};
 updateLanguageFlag();
+
+function closeProductMenu(){$('product-menu').hidden=true;$('product-menu-toggle').setAttribute('aria-expanded','false');}
+$('product-menu-toggle').onclick=()=>{closeLanguages();const menu=$('product-menu');menu.hidden=!menu.hidden;$('product-menu-toggle').setAttribute('aria-expanded',String(!menu.hidden));if(!menu.hidden)menu.querySelector('button:not(:disabled)').focus();};
+$('product-menu').addEventListener('click',e=>{if(e.target.closest('button')&&!e.target.closest('button').disabled)closeProductMenu();});
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.product-menu-anchor'))closeProductMenu();});
+for(const id of ['product-menu','language-menu'])$(id).addEventListener('keydown',e=>{const buttons=[...$(id).querySelectorAll('button:not(:disabled)')];if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();const index=buttons.indexOf(document.activeElement);buttons[e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowUp'?-1:1)+buttons.length)%buttons.length].focus();}if(e.key==='Escape'){e.preventDefault();id==='product-menu'?closeProductMenu():closeLanguages();$(id==='product-menu'?'product-menu-toggle':'language-toggle').focus();}});

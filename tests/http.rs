@@ -27,6 +27,11 @@ fn local_server_serves_ui_and_validates_api() {
     let mut child = Guard(
         Command::new(env!("CARGO_BIN_EXE_skylab-rust"))
             .args(["--no-open", "--port", "0"])
+            .env(
+                "SKYLAB_UPDATES_CONFIG",
+                std::env::temp_dir()
+                    .join(format!("skylab-missing-config-{}.json", std::process::id())),
+            )
             .stdout(Stdio::piped())
             .spawn()
             .unwrap(),

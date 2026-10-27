@@ -355,6 +355,16 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                         .replace("__VERSION__", updates::display_version())
                         .into(),
                 ),
+                ("GET", "/session.js") => (
+                    200,
+                    "text/javascript; charset=utf-8",
+                    include_str!("../web/session.js").into(),
+                ),
+                ("GET", "/studio.js") => (
+                    200,
+                    "text/javascript; charset=utf-8",
+                    include_str!("../web/studio.js").into(),
+                ),
                 ("GET", "/app.js") => (
                     200,
                     "text/javascript; charset=utf-8",

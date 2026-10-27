@@ -13,9 +13,9 @@ using Microsoft.Web.WebView2.WinForms;
 internal static class Program {
     [DllImport("user32.dll")] private static extern bool SetProcessDPIAware();
     [STAThread] private static int Main(string[] args) {
-        if (args.Length > 0 && args[0] == "--fetch-update") {
-            try { Console.OutputEncoding=new System.Text.UTF8Encoding(false);Console.Write(Fetch(args[1]).GetAwaiter().GetResult()); return 0; }
-            catch (Exception e) { Console.Error.Write(e.Message); return 1; }
+        if (args.Length > 1 && (args[0] == "--fetch-update" || args[0] == "--fetch-release")) {
+            try { var bytes=System.Text.Encoding.UTF8.GetBytes(Fetch(args[1], args[0] == "--fetch-release").GetAwaiter().GetResult());using(var output=Console.OpenStandardOutput())output.Write(bytes,0,bytes.Length);return 0; }
+            catch (Exception e) { var bytes=System.Text.Encoding.UTF8.GetBytes(e.GetBaseException().Message);using(var error=Console.OpenStandardError())error.Write(bytes,0,bytes.Length);return 1; }
         }
         Uri target;
         if (args.Length < 1 || !Uri.TryCreate(args[0], UriKind.Absolute, out target) || target.Scheme != "http" || target.Host != "127.0.0.1") return 2;
@@ -34,7 +34,7 @@ internal static class Program {
             return 1;
         }
     }
-    private static async Task<string> Fetch(string source) {
+    private static async Task<string> Fetch(string source, bool release) {
         Uri uri;
         if (!Uri.TryCreate(source, UriKind.Absolute, out uri) || uri.Scheme != "https" || !String.IsNullOrEmpty(uri.UserInfo)) throw new Exception("A fonte de atualização deve usar HTTPS, sem credenciais no endereço.");
         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
@@ -42,7 +42,10 @@ internal static class Program {
         using (var handler = new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })
         using (var client = new HttpClient(handler)) {
             client.Timeout = TimeSpan.FromSeconds(12);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("SkyLab/0.1");
+            if (release) client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
             using (var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancel.Token)) {
+                if (release && response.StatusCode == HttpStatusCode.NotFound) return "{\"no_release\":true}";
                 response.EnsureSuccessStatusCode();
                 if (response.Content.Headers.ContentLength > 1048576) throw new Exception("Manifesto de atualização muito grande.");
                 using (var stream = await response.Content.ReadAsStreamAsync())
@@ -62,7 +65,7 @@ internal sealed class ShellWindow : Form {
     private readonly Panel caption = new Panel();
     private readonly CaptionButton[] captionButtons;
     private bool allowClose, checkingClose, ready;
-    private readonly Label loading = new Label();
+    private readonly PictureBox loading = new PictureBox();
     [DllImport("user32.dll")] private static extern bool ReleaseCapture();
     [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr h, int msg, IntPtr w, IntPtr l);
     [DllImport("user32.dll")] private static extern bool SetProp(IntPtr h, string name, IntPtr value);
@@ -90,7 +93,8 @@ internal sealed class ShellWindow : Form {
         MinimumSize=new Size(Math.Min((int)Math.Round((setup?700:900)*uiScale),area.Width-16),Math.Min((int)Math.Round((setup?540:600)*uiScale),area.Height-16));
         Size=new Size(Math.Min((int)Math.Round((setup?920:1380)*uiScale),area.Width-30),Math.Min((int)Math.Round((setup?670:920)*uiScale),area.Height-30));MaximizedBounds=area;
         try { Icon=new Icon(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"app.ico")); } catch { }
-        loading.Text="SkyLab";loading.ForeColor=Color.White;loading.Font=new Font("Segoe UI",22);loading.Dock=DockStyle.Fill;loading.TextAlign=ContentAlignment.MiddleCenter;
+        loading.Dock=DockStyle.Fill;loading.SizeMode=PictureBoxSizeMode.CenterImage;
+        if (Icon != null) loading.Image=new Icon(Icon,128,128).ToBitmap();
         Controls.Add(loading);browser.Dock=DockStyle.Fill;browser.DefaultBackgroundColor=BackColor;browser.Visible=false;Controls.Add(browser);browser.BringToFront();
         caption.BackColor=BackColor;caption.Anchor=AnchorStyles.Top|AnchorStyles.Right;captionButtons=new[]{new CaptionButton("minimize",this),new CaptionButton("maximize",this),new CaptionButton("close",this)};
         foreach(var button in captionButtons){var command=button.Command;button.Click+=delegate{RunCommand(command);};caption.Controls.Add(button);}

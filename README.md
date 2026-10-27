@@ -61,7 +61,7 @@ WGS84/UTM usa séries de Transversa de Mercator de Snyder, restritas à zona; os
 
 Consulte **VALIDACAO.md** para resultados e decisões pendentes, **IDENTIDADE.md** para a origem da marca e **REPOSITORIO.md** para histórico, continuidade no espaço de trabalho e migração para o servidor da empresa.
 
-O botão **Checar atualização** consulta uma fonte configurável. Enquanto o servidor/arquivo da empresa não for definido, informa que a fonte não está configurada. Consulte **ATUALIZACOES.md**. A janela usa o SVG branco fornecido pelo usuário; slogans foram removidos.
+O símbolo de atualização consulta as Releases de JDantanna/SkyLab. Consulte **ATUALIZACOES.md** para publicar o instalador ou migrar para uma fonte corporativa. A janela usa o SVG branco fornecido pelo usuário; slogans foram removidos.
 
 
 

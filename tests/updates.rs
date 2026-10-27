@@ -1,4 +1,38 @@
 use skylab_rust::updates;
+#[test]
+fn github_releases_only_offer_newer_stable_installers_from_this_repository() {
+    let release = |tag: &str, url: &str| {
+        serde_json::json!({"tag_name":tag,"body":"Release notes","assets":[{"name":"SkyTEM-SkyLab-Setup-0.2.exe","state":"uploaded","browser_download_url":url}]}).to_string()
+    };
+    let trusted =
+        "https://github.com/JDantanna/SkyLab/releases/download/v0.2/SkyTEM-SkyLab-Setup-0.2.exe";
+    let check = updates::github_release(&release("v0.2", trusted)).unwrap();
+    assert_eq!(check.status, "available");
+    assert_eq!(check.download_url.as_deref(), Some(trusted));
+    assert_eq!(
+        updates::github_release(&release("v0.1.0", trusted))
+            .unwrap()
+            .status,
+        "up_to_date"
+    );
+    for bad in [
+        "https://example.com/setup.exe",
+        "https://github.com/JDantanna/SkyLab.evil/releases/download/a.exe",
+        "http://github.com/JDantanna/SkyLab/releases/download/a.exe",
+    ] {
+        let check = updates::github_release(&release("v0.2", bad)).unwrap();
+        assert_eq!(check.status, "release_pending");
+        assert!(check.download_url.is_none());
+    }
+    for text in [
+        r#"{"no_release":true}"#,
+        r#"{"draft":true}"#,
+        r#"{"prerelease":true}"#,
+    ] {
+        assert_eq!(updates::github_release(text).unwrap().status, "no_release");
+    }
+    assert!(updates::github_release(&release("vbad", trusted)).is_err());
+}
 use std::{
     fs,
     path::PathBuf,

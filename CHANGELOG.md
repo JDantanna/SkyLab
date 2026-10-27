@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 0.1 — abas e prévias (sem avanço de versão)
+
+- Cabeçalho compacto com menu na logo, efeito de hover e controles de atualização e idioma.
+- Até três projetos com geometria, seleção, enquadramento, parâmetros e histórico independentes; aviso antes de fechar alterações sem salvar.
+- Sliders em hover e prévia temporária para geração, corte e divisão. Respostas antigas são descartadas, com uma operação de prévia por vez.
+- Numeração em português alinhada; logo exibida durante a abertura da janela.
+- Consulta manual de Releases do GitHub e fluxo de publicação do instalador. Revisões com a mesma versão não geram aviso de versão posterior.
+
 ## 0.1 — revisão institucional (sem avanço de versão)
 
 - Versão atual mantida em 0.1 por orientação expressa do usuário; próximos avanços exigem pergunta e aprovação.

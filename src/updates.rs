@@ -147,5 +147,102 @@ pub fn config_path() -> std::path::PathBuf {
         })
 }
 pub fn check() -> Result<Check> {
-    check_at(&config_path())
+    let path = config_path();
+    if std::env::var_os("SKYLAB_UPDATES_CONFIG").is_some() || path.exists() {
+        return check_at(&path);
+    }
+    #[cfg(windows)]
+    {
+        let output = crate::desktop::hidden(crate::desktop::host_command()?.args([
+            "--fetch-release",
+            "https://api.github.com/repos/JDantanna/SkyLab/releases/latest",
+        ]))
+        .output()
+        .map_err(|e| e.to_string())?;
+        if !output.status.success() {
+            return Err(format!(
+                "Não foi possível consultar o GitHub: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
+        github_release(
+            std::str::from_utf8(&output.stdout).map_err(|_| "Resposta de atualização inválida")?,
+        )
+    }
+    #[cfg(not(windows))]
+    {
+        Err("Consulta HTTPS disponível no Windows.".into())
+    }
+}
+
+/// Only published stable releases with an installer hosted by this repository are offered.
+pub fn github_release(text: &str) -> Result<Check> {
+    #[derive(Deserialize)]
+    struct Asset {
+        name: String,
+        state: String,
+        browser_download_url: String,
+    }
+    #[derive(Deserialize)]
+    struct Release {
+        #[serde(default)]
+        no_release: bool,
+        #[serde(default)]
+        draft: bool,
+        #[serde(default)]
+        prerelease: bool,
+        tag_name: Option<String>,
+        body: Option<String>,
+        #[serde(default)]
+        assets: Vec<Asset>,
+    }
+    let release: Release =
+        serde_json::from_str(text).map_err(|e| format!("Resposta do GitHub inválida: {e}"))?;
+    let mut result = Check {
+        status: "no_release".into(),
+        current_version: display_version().into(),
+        latest_version: None,
+        download_url: None,
+        notes: None,
+        message: "Nenhuma versão publicada no GitHub.".into(),
+    };
+    if release.no_release || release.draft || release.prerelease {
+        return Ok(result);
+    }
+    let tag = release
+        .tag_name
+        .ok_or("Versão ausente na resposta do GitHub.")?;
+    let latest = tag.strip_prefix('v').unwrap_or(&tag);
+    let newer = version(latest)? > version(env!("CARGO_PKG_VERSION"))?;
+    result.latest_version = Some(latest.into());
+    result.notes = release.body.map(|s| s.chars().take(4096).collect());
+    result.download_url = release
+        .assets
+        .into_iter()
+        .find(|asset| {
+            asset.state == "uploaded"
+                && asset.name.starts_with("SkyTEM-SkyLab-Setup-")
+                && asset.name.ends_with(".exe")
+                && safe_https(&asset.browser_download_url)
+                && asset
+                    .browser_download_url
+                    .starts_with("https://github.com/JDantanna/SkyLab/releases/download/")
+        })
+        .map(|asset| asset.browser_download_url);
+    let (status, message) = if !newer {
+        (
+            "up_to_date",
+            "Nenhuma versão posterior publicada no GitHub.",
+        )
+    } else if result.download_url.is_some() {
+        ("available", "Há uma atualização disponível.")
+    } else {
+        (
+            "release_pending",
+            "A versão foi publicada, mas o instalador ainda não está disponível.",
+        )
+    };
+    result.status = status.into();
+    result.message = message.into();
+    Ok(result)
 }
