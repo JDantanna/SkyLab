@@ -10,8 +10,8 @@ test('project shortcuts preserve text editing and avoid acting behind dialogs',(
 function harness(){
  const elements=new Map(),listeners={};const element=id=>{if(!elements.has(id))elements.set(id,{value:'23',textContent:id==='project-title'?'Synthetic project':'Synthetic source',hidden:true});return elements.get(id);};
  const context=vm.createContext({console,Set,structuredClone,window:{SkyLabInteractions:interactions,skyAuthority:null},document:{activeElement:{tagName:'BODY'},querySelector:()=>null,addEventListener:(name,handler)=>listeners[name]=handler},$:element,render(){},status(){},refreshSatellite(){},getCrs:()=>({zone:23,south:true}),tr:s=>s});
- vm.runInContext('let project={lines:Array.from({length:12},(_,i)=>({name:"L"+i,points:[[i,0],[i,100]]}))},selected=4,selection=new Set([4]),selectionAnchor=4,view={x:100,y:200,span:500},history=[],future=[],busy=false,dirty=false;const selectedIndices=()=>[...selection].filter(i=>project?.lines[i]);',context);
- const source=fs.readFileSync(require.resolve('../web/workspace.js'),'utf8');const code=source.slice(source.indexOf('const HISTORY_LIMIT='),source.indexOf("$('new').onclick="));vm.runInContext(code,context);
+ vm.runInContext('let selectedPolygon=-1;let project={polygons:[],lines:Array.from({length:12},(_,i)=>({name:"L"+i,points:[[i,0],[i,100]]}))},selected=4,selection=new Set([4]),selectionAnchor=4,view={x:100,y:200,span:500},history=[],future=[],busy=false,dirty=false;const selectedIndices=()=>[...selection].filter(i=>project?.lines[i]);',context);
+ const source=fs.readFileSync(require.resolve('../web/workspace.js'),'utf8');const code=source.slice(source.indexOf('const HISTORY_LIMIT='),source.indexOf("async function selectionMutation"));vm.runInContext(code,context);
  const app=fs.readFileSync(require.resolve('../web/app.js'),'utf8'),start=app.indexOf("document.addEventListener('keydown',"),end=app.indexOf('\nasync function download',start);vm.runInContext(app.slice(start,end),context);
  return {context,listeners,element,run:code=>vm.runInContext(code,context)};
 }

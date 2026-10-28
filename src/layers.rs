@@ -11,7 +11,7 @@ pub struct Layer {
     pub warnings: Vec<String>,
 }
 pub fn validate(project: &Project) -> Result<()> {
-    if project.layers.len() > 1000 || (!project.layers.is_empty() && project.version != 3) {
+    if project.layers.len() > 1000 || (!project.layers.is_empty() && project.version < 3) {
         return Err("Estrutura de camadas inválida.".into());
     }
     let mut ids = HashSet::new();
@@ -21,7 +21,8 @@ pub fn validate(project: &Project) -> Result<()> {
             || layer.name.trim().is_empty()
             || layer.name.len() > 1024
             || layer.name.chars().any(char::is_control)
-            || !["KML", "KMZ", "MIS", "Generated", "Project"].contains(&layer.source.as_str())
+            || !["KML", "KMZ", "MIS", "Generated", "Project", "Drawing"]
+                .contains(&layer.source.as_str())
         {
             return Err("Identificação de camada inválida.".into());
         }
@@ -55,7 +56,7 @@ pub fn subset(project: &Project, id: u32) -> Result<Project> {
     }
     let layer = project.layers.iter().find(|l| l.id == id).unwrap().clone();
     let result = Project {
-        version: 3,
+        version: project.version.max(3),
         crs: project.crs.clone(),
         warnings: layer.warnings.clone(),
         layers: vec![layer],

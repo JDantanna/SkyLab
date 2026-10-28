@@ -14,6 +14,7 @@ fn ring(coords: &[(f64, f64)]) -> Vec<Point> {
 }
 fn square() -> Polygon {
     Polygon {
+        curve: None,
         layer: None,
         outer: ring(&[(0., 0.), (1000., 0.), (1000., 1000.), (0., 1000.), (0., 0.)]),
         holes: vec![],
@@ -158,6 +159,7 @@ fn hole_splits_without_connecting_exclusion() {
 #[test]
 fn concave_polygon_splits_into_two() {
     let g = Polygon {
+        curve: None,
         layer: None,
         outer: ring(&[
             (0., 0.),

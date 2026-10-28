@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.2 — polígonos e revisão do código (revisão interna 3)
+
+- Geração e prévia na barra contextual do polígono selecionado; comandos de edição em faixa superior.
+- Caneta para polígonos com alças Bézier; inserção de âncoras com Shift, edição por arrasto e histórico. JSON formato 4 preserva as curvas; formatos anteriores continuam legíveis.
+- Importação na área vazia e no menu de contexto; camadas permanecem dedicadas aos dados.
+- Coordenadas e atribuição XYZ na borda inferior do mapa, sem sobrepor zoom.
+- Três revisões independentes cobriram Rust, interface e integração Windows. Removidos caminho legado do instalador, comandos sobrescritos, traduções e CSS sem uso; eliminadas validações repetidas.
+- Corrigidos exclusão após seleção por retângulo, redesenho da prévia XYZ e exportação de camadas com curvas; KML inclui polígonos e furos.
+
 ## 0.2 — painéis e integração com arquivos (revisão interna 2)
 
 - Painéis móveis e redimensionáveis com encaixe lateral/inferior, posições flutuantes internas, minimizar, ocultar e restaurar layout persistente.

@@ -84,6 +84,8 @@ fn invalid_payload_does_not_create_installation() {
     let (parent, o) = temp();
     assert!(installation::install(&o, b"invalid", b"MZ-test").is_err());
     assert!(!o.root.exists());
+    assert!(installation::install(&o, b"MZ-test", b"invalid").is_err());
+    assert!(!o.root.exists());
     fs::remove_dir(parent).unwrap();
 }
 
@@ -153,23 +155,6 @@ fn internal_update_preserves_uninstaller_shortcuts_and_personal_files_and_rolls_
     fs::remove_file(source).unwrap();
     fs::remove_dir(parent).unwrap();
 }
-#[test]
-fn executable_source_is_copied_exactly_and_invalid_source_cannot_create_installation() {
-    let (parent, o) = temp();
-    let source = parent.join("source.exe");
-    fs::write(&source, b"not an executable").unwrap();
-    assert!(installation::install_from_executable(&o, b"MZ-app", &source, |_, _| {}).is_err());
-    assert!(!o.root.exists());
-    let setup = b"MZ-setup-source-with-binary-data\0\xff";
-    fs::write(&source, setup).unwrap();
-    installation::install_from_executable(&o, b"MZ-app", &source, |_, _| {}).unwrap();
-    assert_eq!(fs::read(o.root.join(UNINSTALL)).unwrap(), setup);
-    assert_eq!(fs::read(&source).unwrap(), setup);
-    installation::uninstall(&o).unwrap();
-    fs::remove_file(source).unwrap();
-    fs::remove_dir(parent).unwrap();
-}
-
 #[test]
 fn install_progress_finishes_only_after_files_and_shortcuts_exist() {
     let (parent, o) = temp();

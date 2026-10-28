@@ -15,6 +15,8 @@ struct Request {
     append: bool,
     index: Option<usize>,
     indices: Option<Vec<usize>>,
+    anchors: Option<Vec<curves::Anchor>>,
+    point: Option<Point>,
     start: Option<f64>,
     end: Option<f64>,
     stroke: Option<Vec<Point>>,
@@ -22,6 +24,17 @@ struct Request {
     geographic: bool,
 }
 fn process(r: Request) -> Result<Value> {
+    if r.op == "initialize" {
+        let crs = r
+            .crs
+            .ok_or("Confirm the coordinate system before drawing")?;
+        crs.validate()?;
+        let center = crs.forward([
+            f64::from(crs.zone) * 6.0 - 183.0,
+            if crs.south { -20.0 } else { 55.0 },
+        ])?;
+        return Ok(json!({"project":Project::empty(crs),"center":center}));
+    }
     if r.op == "read-kmz" {
         return Ok(json!({"text":kmz::read(&r.text)?}));
     }
@@ -86,11 +99,54 @@ fn process(r: Request) -> Result<Value> {
     // These public operations validate their input themselves; avoid repeating polygon topology work.
     if !matches!(
         r.op.as_str(),
-        "generate" | "export-mis" | "export-kml" | "cut-stroke"
+        "generate"
+            | "export-mis"
+            | "export-kml"
+            | "cut-stroke"
+            | "upsert-polygon"
+            | "insert-anchor"
+            | "layer-subset"
     ) {
         p.validate()?;
     }
     match r.op.as_str() {
+        "polygon-anchors" => {
+            let polygon = p
+                .polygons
+                .get(r.index.ok_or("Select a polygon")?)
+                .ok_or("Selected polygon is unavailable")?;
+            let mut anchors = curves::anchors(polygon);
+            if r.geographic {
+                for a in &mut anchors {
+                    a.point = p.crs.inverse(a.point)?;
+                    a.incoming = a.incoming.map(|q| p.crs.inverse(q)).transpose()?;
+                    a.outgoing = a.outgoing.map(|q| p.crs.inverse(q)).transpose()?;
+                }
+            }
+            return Ok(json!(anchors));
+        }
+        "upsert-polygon" => {
+            let mut anchors = r.anchors.ok_or("Polygon anchors are missing")?;
+            if r.geographic {
+                for a in &mut anchors {
+                    a.point = p.crs.forward(a.point)?;
+                    a.incoming = a.incoming.map(|q| p.crs.forward(q)).transpose()?;
+                    a.outgoing = a.outgoing.map(|q| p.crs.forward(q)).transpose()?;
+                }
+            }
+            return Ok(json!(curves::upsert(&p, r.index, anchors)?));
+        }
+        "insert-anchor" => {
+            let mut point = r.point.ok_or("Anchor location is missing")?;
+            if r.geographic {
+                point = p.crs.forward(point)?;
+            }
+            return Ok(json!(curves::insert(
+                &p,
+                r.index.ok_or("Select a polygon")?,
+                point
+            )?));
+        }
         "cut-stroke" => {
             let mut stroke = r.stroke.ok_or("Traço de corte ausente")?;
             if r.geographic {
@@ -103,7 +159,9 @@ fn process(r: Request) -> Result<Value> {
         "reproject" => {
             let target = r.crs.ok_or("Choose the target CRS")?;
             target.validate()?;
+            let flattened = p.polygons.iter().any(|g| g.curve.is_some());
             for g in &mut p.polygons {
+                g.curve = None;
                 for point in g.outer.iter_mut().chain(g.holes.iter_mut().flatten()) {
                     *point = target.forward(p.crs.inverse(*point)?)?;
                 }
@@ -112,6 +170,9 @@ fn process(r: Request) -> Result<Value> {
                 for point in &mut l.points {
                     *point = target.forward(p.crs.inverse(*point)?)?;
                 }
+            }
+            if flattened {
+                p.warnings.push("Editable curves were converted to vertices during CRS reprojection to preserve their geometry.".into());
             }
             p.crs = target;
             if p.crs.authority.is_some() {
@@ -144,6 +205,7 @@ fn process(r: Request) -> Result<Value> {
                 Ok(())
             };
             for g in &mut p.polygons {
+                g.curve = None;
                 geographic(&mut g.outer)?;
                 for hole in &mut g.holes {
                     geographic(hole)?;
@@ -173,7 +235,20 @@ fn process(r: Request) -> Result<Value> {
         }
         "validate" => return Ok(json!(p)),
         "generate" => {
-            let mut lines = generate(&p, &r.settings.ok_or("Parâmetros ausentes")?)?;
+            let settings = r.settings.ok_or("Parâmetros ausentes")?;
+            let subset = if let Some(index) = r.index {
+                Some(Project {
+                    version: p.version,
+                    crs: p.crs.clone(),
+                    layers: p.layers.clone(),
+                    polygons: vec![p.polygons.get(index).ok_or("Select a polygon")?.clone()],
+                    lines: vec![],
+                    warnings: vec![],
+                })
+            } else {
+                None
+            };
+            let mut lines = generate(subset.as_ref().unwrap_or(&p), &settings)?;
             let id = layers::next_id(&p)?;
             for line in &mut lines {
                 line.layer = Some(id);
@@ -184,7 +259,7 @@ fn process(r: Request) -> Result<Value> {
                 source: "Generated".into(),
                 warnings: vec![],
             });
-            p.version = 3;
+            p.version = p.version.max(3);
             if r.append {
                 p.lines.extend(lines)
             } else {
@@ -517,6 +592,11 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 200,
                 "text/css; charset=utf-8",
                 include_str!("../web/panels.css").into(),
+            ),
+            ("GET", "/polygons.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/polygons.js").into(),
             ),
             ("GET", "/panels.js") => (
                 200,

@@ -2,15 +2,15 @@
 
 O símbolo de atualização consulta as Releases estáveis de [JDantanna/SkyLab](https://github.com/JDantanna/SkyLab/releases). Quando houver uma compilação posterior, **Update and restart** baixa o pacote do aplicativo, verifica SHA256 e identidade, salva a sessão, encerra, substitui o executável e reinicia. Não abre navegador nem outro instalador. Não há consulta periódica nem telemetria.
 
-A versão aprovada permanece **0.1**. BUILD_REVISION identifica correções da mesma versão; avançar para 0.2 requer aprovação explícita. Publicações são imutáveis, identificadas por v0.1-r3, por exemplo.
+A versão aprovada permanece **0.2**. BUILD_REVISION identifica correções da mesma versão; avançar para 0.3 requer aprovação explícita. Publicações são imutáveis, identificadas por v0.2-r3, por exemplo.
 
-**Instalações da revisão 2 ou anteriores precisam executar o instalador desta revisão uma vez.** Elas ainda possuem o mecanismo antigo; o novo comportamento passa a valer após essa instalação.
+**Instalações 0.1, revisão interna 2 ou anteriores, precisam executar o instalador uma vez.** Elas ainda possuem o mecanismo antigo; o novo comportamento passa a valer após essa instalação.
 
 ## Preservação da sessão
 
 Até três abas, projetos não salvos, seleção, enquadramento e valores dos campos são recuperados. O histórico de desfazer começa uma nova sessão após reiniciar. Pacote e sessão ficam temporariamente no computador e são removidos após a confirmação da restauração. Nenhum levantamento é enviado ao GitHub.
 
-SkyLab-Rust.previous.exe mantém o executável anterior. Falha na substituição ou no registro restaura executável e manifesto anteriores. Atalhos, desinstalador e arquivos pessoais permanecem. O aplicativo precisa estar instalado; cópias portáteis não são atualizadas por esse fluxo.
+SkyLab-Rust.previous.exe mantém o executável anterior. Falha na substituição ou no registro restaura executável e manifesto anteriores. Atalhos e arquivos pessoais permanecem. Ao migrar da 0.1, o desinstalador também é atualizado para remover os registros MIS próprios. O aplicativo precisa estar instalado; cópias portáteis não são atualizadas por esse fluxo.
 
 ## Publicação
 

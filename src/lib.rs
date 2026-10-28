@@ -1,6 +1,7 @@
 //! Local mission geometry. Working coordinates use a projected CRS in metres.
 use serde::{Deserialize, Serialize};
 use std::fmt::Write as _;
+pub mod curves;
 pub mod desktop;
 pub mod editing;
 pub mod files;
@@ -15,6 +16,7 @@ pub mod updates;
 pub type Result<T> = std::result::Result<T, String>;
 pub type Point = [f64; 2];
 const EPS: f64 = 1e-7;
+pub(crate) const MAX_RING_POINTS: usize = 2001;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Crs {
     pub zone: u8,
@@ -28,6 +30,8 @@ pub struct Polygon {
     pub layer: Option<u32>,
     pub outer: Vec<Point>,
     pub holes: Vec<Vec<Point>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub curve: Option<Vec<curves::Anchor>>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Line {
@@ -224,7 +228,7 @@ fn rings_cross(a: &[Point], b: &[Point]) -> bool {
         .any(|x| b.windows(2).any(|y| intersects(x[0], x[1], y[0], y[1])))
 }
 fn validate_ring(r: &[Point]) -> Result<()> {
-    if r.len() < 4 || r.len() > 2001 || r.first() != r.last() {
+    if r.len() < 4 || r.len() > MAX_RING_POINTS || r.first() != r.last() {
         return Err("Anel deve ser fechado, com 3 a 2000 vértices.".into());
     }
     let origin = r[0];
@@ -265,7 +269,8 @@ impl Project {
         self.validate_with_lines(&self.lines)
     }
     fn validate_with_lines(&self, lines: &[Line]) -> Result<()> {
-        if ![1, 2, 3].contains(&self.version) || (self.crs.authority.is_some() && self.version < 2)
+        if ![1, 2, 3, 4].contains(&self.version)
+            || (self.crs.authority.is_some() && self.version < 2)
         {
             return Err("Versão de projeto não suportada.".into());
         }
@@ -283,6 +288,20 @@ impl Project {
             return Err("Projeto excede os limites desta versão.".into());
         }
         for g in &self.polygons {
+            if let Some(anchors) = &g.curve {
+                if self.version < 4 {
+                    return Err("Editable polygon curves require project format 4.".into());
+                }
+                let outer = curves::flatten(anchors)?;
+                if outer.len() != g.outer.len()
+                    || outer
+                        .iter()
+                        .zip(&g.outer)
+                        .any(|(a, b)| distance(*a, *b) > 1e-6)
+                {
+                    return Err("Polygon vertices do not match the editable curve.".into());
+                }
+            }
             validate_ring(&g.outer)?;
             for (i, h) in g.holes.iter().enumerate() {
                 validate_ring(h)?;
@@ -472,6 +491,7 @@ pub fn import_kml(text: &str, crs: Crs) -> Result<Project> {
                 layer: None,
                 outer: coords(outer, &p.crs)?,
                 holes: vec![],
+                curve: None,
             };
             for h in n.children().filter(|n| n.has_tag_name("innerBoundaryIs")) {
                 g.holes.push(coords(h, &p.crs)?)
@@ -709,6 +729,30 @@ pub fn export_kml(p: &Project) -> Result<String> {
             write!(s, "{:.10},{:.10},0 ", v[0], v[1]).expect("writing to String cannot fail");
         }
         s += "</coordinates></LineString></Placemark>";
+    }
+    for (index, polygon) in p.polygons.iter().enumerate() {
+        write!(s, "<Placemark><name>Polygon {}</name><Polygon>", index + 1)
+            .expect("writing to String cannot fail");
+        for (ring_index, ring) in std::iter::once(&polygon.outer)
+            .chain(polygon.holes.iter())
+            .enumerate()
+        {
+            let boundary = if ring_index == 0 {
+                "outerBoundaryIs"
+            } else {
+                "innerBoundaryIs"
+            };
+            write!(s, "<{boundary}><LinearRing><coordinates>")
+                .expect("writing to String cannot fail");
+            for point in ring {
+                let geographic = p.crs.inverse(*point)?;
+                write!(s, "{:.10},{:.10},0 ", geographic[0], geographic[1])
+                    .expect("writing to String cannot fail");
+            }
+            write!(s, "</coordinates></LinearRing></{boundary}>")
+                .expect("writing to String cannot fail");
+        }
+        s += "</Polygon></Placemark>";
     }
     s += "</Document></kml>";
     Ok(s)

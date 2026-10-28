@@ -101,7 +101,7 @@ Consulte GOOGLE-MAPS-CUSTOS.md para as franquias oficiais e limitações de uso 
 
 ## Painéis e navegação durante a edição
 
-Arraste o título de um painel para reposicioná-lo. Solte nas zonas Esquerda, Direita ou Embaixo para encaixar; solte dentro da área de trabalho para manter flutuante. O seletor no título permite o mesmo encaixe pelo teclado. Arraste a borda entre uma lateral e o mapa para mudar sua largura; a alça inferior de cada painel muda sua altura, ou altura/largura quando flutuante. O botão − minimiza, × oculta. Ajuda → Painéis reabre os painéis e restaura o layout. O posicionamento é interno à janela SkyLab e é lembrado neste computador.
+Os comandos de gerar linhas ficam na barra contextual do polígono, sem painel próprio. Arraste o título dos demais painéis para reposicioná-los. Solte nas zonas Esquerda, Direita ou Embaixo para encaixar; solte dentro da área de trabalho para manter flutuante. O seletor no título permite o mesmo encaixe pelo teclado. Arraste a borda entre uma lateral e o mapa para mudar sua largura; a alça inferior de cada painel muda sua altura, ou altura/largura quando flutuante. O botão − minimiza, × oculta. Ajuda → Painéis reabre os painéis e restaura o layout. O posicionamento é interno à janela SkyLab e é lembrado neste computador.
 
 A ferramenta Mover (mão) fica junto de Selecionar e Cortar. Segure Espaço para mover temporariamente durante a edição; soltar restaura a ferramenta anterior. O atalho não interfere na digitação em campos. Não modifica geometria nem cria passos no histórico.
 
@@ -112,3 +112,16 @@ A tela inicial lista os últimos 12 arquivos abertos pelo seletor nativo, arrast
 O instalador registra MIS no Windows para este usuário. Duplo clique abre uma aba; com três abas abertas, feche uma para receber o arquivo pendente. Se outro aplicativo já tiver sido escolhido como padrão, use Abrir com → SkyLab → Sempre uma vez. A atualização interna da 0.1 também instala esse registro e migra o desinstalador.
 
 Selecione linhas no mapa ou na lista; botão direito → Exportar seleção · MIS exporta somente elas. Shift mantém a seleção de intervalos. Todos os vértices são preservados; nomes duplicados precisam ser resolvidos ou exportados por camada separada.
+
+
+## Caneta e polígonos
+
+Clique em Editar geometria e Caneta. Um projeto vazio pede confirmação de projeção e começa numa vista de referência da zona escolhida; posicione o desenho pelos dados e coordenadas da equipe. Clique para criar âncoras retas; clique e arraste para criar alças de curva. Clique no primeiro ponto ou pressione Enter para fechar. Escape cancela. Ctrl+Z/Ctrl+Y durante o traçado retiram/restauram pontos. O contorno só entra no projeto depois da validação geométrica; contornos que cruzam a si mesmos são recusados.
+
+O polígono aparece em Camadas → Polígonos desenhados. Selecione-o no mapa ou nessa árvore: a barra superior mostra espaçamento, azimute, deslocamento, comprimento mínimo e numeração, com prévia em tempo real. Gerar atua somente no polígono selecionado. Adicionar malha mantém as linhas existentes; desmarcado, a geração substitui as linhas atuais, como nas versões anteriores.
+
+Shift + clique no contorno externo selecionado insere uma âncora mantendo o formato da curva. Com Selecionar, arraste pontos ou alças; Alt permite separar as alças. Mover um ponto também move suas alças. Cortar continua sendo a ferramenta de divisão de linhas; a caneta cria polígonos, sem criar linhas de missão avulsas.
+
+Salvar projeto preserva âncoras e alças em JSON formato 4. Formatos anteriores continuam legíveis; versões antigas do aplicativo não abrem o formato novo. Reprojetar lineariza as curvas e deixa uma nota, mantendo o contorno. Exportar a camada em JSON preserva edição; em KML exporta o contorno e seus furos. Os cálculos têm tolerância de 0,1 m na aproximação das curvas.
+
+Clique no botão de importação da área vazia, use Abrir no menu SkyLab ou Adicionar arquivo no botão direito do mapa. O painel de camadas fica dedicado à organização dos dados.

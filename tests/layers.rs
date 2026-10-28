@@ -47,6 +47,7 @@ fn fixture() -> Project {
         },
     ];
     p.polygons = vec![Polygon {
+        curve: None,
         layer: Some(3),
         outer: vec![
             [499900., 7799900.],

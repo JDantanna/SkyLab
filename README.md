@@ -4,7 +4,7 @@ Primeira versão utilizável, local, do fluxo de missões do SkyLab para helicó
 
 ## Layout e arquivos
 
-Os painéis de camadas, malha, revisão, seleção, corte por distância e ações em lote podem ser redimensionados, minimizados, ocultados e movidos entre as laterais, a parte inferior e posições flutuantes dentro da janela SkyLab. Arraste o título ou use o seletor de encaixe; Ajuda > Painéis permite reabrir painéis e restaurar o layout. O layout é lembrado neste computador.
+Os painéis de camadas, revisão, seleção, corte por distância e ações em lote podem ser redimensionados, minimizados, ocultados e movidos entre as laterais, a parte inferior e posições flutuantes dentro da janela SkyLab. Arraste o título ou use o seletor de encaixe; Ajuda > Painéis permite reabrir painéis e restaurar o layout. O layout é lembrado neste computador.
 
 Durante a edição, segure Espaço para mover o mapa e solte para voltar à ferramenta anterior. A mão também está disponível na barra. Botão direito > Exportar seleção · MIS exporta só as linhas selecionadas, preservando todos os vértices.
 
@@ -12,9 +12,17 @@ A tela inicial mostra até 12 arquivos recentes e reabre seu conteúdo atual no 
 
 Esta é uma versão de testes; o rodapé de todas as telas informa o contato Rafael Dantas, rda@skytem.com.
 
+## Polígonos e barra contextual
+
+As ferramentas de geração ficam na barra superior e aparecem ao selecionar um polígono no mapa ou nas camadas. A prévia e a geração usam somente esse polígono. A edição (Selecionar, Cortar, Caneta e Mover) também fica na faixa superior. Importar está no menu SkyLab, na tela vazia e no menu do botão direito do mapa.
+
+A caneta cria exclusivamente polígonos: clique para pontos retos, clique e arraste para alças Bézier, clique no primeiro ponto ou pressione Enter para fechar. Shift + clique no contorno selecionado insere um ponto sem alterar a curva; Selecionar permite mover pontos e alças. Alt move uma alça separadamente. Escape cancela o traçado; Ctrl+Z/Ctrl+Y percorrem seus pontos enquanto ele ainda está em desenho. Depois de fechado, o polígono e suas edições participam do histórico normal.
+
+Curvas são preservadas no projeto JSON. Os cálculos usam um contorno com desvio de até 0,1 m e respeitam os limites de vértices; autointerseções são recusadas. Reprojetar converte a curva em vértices para preservar seu contorno transformado e registra uma nota. KML exporta o contorno e os furos, sem alças editáveis.
+
 ## Camadas e edição
 
-MIS/MISSION, KML e KMZ ficam em grupos separados no painel de camadas. Expanda um arquivo para ver seus polígonos e linhas; botão direito exporta somente esse grupo. Salvar projeto mantém as camadas em JSON formato 3, com leitura dos formatos anteriores. A versão do programa é 0.2.
+MIS/MISSION, KML e KMZ ficam em grupos separados no painel de camadas. Expanda um arquivo para ver seus polígonos e linhas; botão direito exporta somente esse grupo. Salvar projeto mantém camadas e, quando presentes, curvas editáveis em JSON formato 4; os formatos 1, 2 e 3 continuam legíveis. Projetos sem curvas podem continuar no formato 3. A versão do programa é 0.2.
 
 Arraste os rótulos dos parâmetros para ajustar valores com prévia em tempo real, sem painel flutuante. Clique em Satellite para trocar a conexão diretamente, mantendo o enquadramento. Consulte GUIA-OPERACAO.md.
 
@@ -28,7 +36,7 @@ A opção Google Satellite XYZ utiliza a mesma conexão do QuickMapServices/QGIS
 
 ## Instalar e abrir
 
-Obtenha **SkyTEM-SkyLab-Setup-0.2-r2.exe** na [Release 0.2](https://github.com/JDantanna/SkyLab/releases/tag/v0.2-r2) e execute o instalador. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
+Obtenha **SkyTEM-SkyLab-Setup-0.2-r3.exe** na [Release 0.2](https://github.com/JDantanna/SkyLab/releases/tag/v0.2-r3) e execute o instalador. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
 
 Abra **SkyLab** pelo menu Iniciar ou pelo atalho. A janela Windows usa WebView2 e controles integrados ao cabeçalho azul, sem a moldura do navegador. A versão exibida é **0.2** (0.2.0 no pacote Rust). Antes de qualquer avanço de versão, será solicitada uma decisão explícita do usuário.
 
@@ -61,9 +69,9 @@ Consulte **GUIA-OPERACAO.md** para importação com confirmação de CRS, seleç
 
 Esta versão **não está homologada para navegação em voo**. Antes de uso operacional, a equipe deve conferir datum, zona, coordenadas e nomes no sistema de bordo, verificar se aceita nomes com sufixos e polilinhas, e validar a missão por seu procedimento operacional. Nenhum teste foi realizado no SkyMap ou equipamento de bordo.
 
-Planejamento 2D: não calcula terreno, obstáculos, altura, curvas, raio de giro, entradas/saídas, autonomia, zonas aeronáuticas nem sequenciamento operacional. A imagem de satélite é opcional e requer configuração Google; não há importação SHP/KMZ, desenho de blocos, edição por arrastar vértices ou vínculo automático com o sistema de bordo. KML precisa de coordenadas geográficas, mesmo quando o arquivo tem “UTM” no nome. KMZ deve ser descompactado externamente.
+Planejamento 2D: não calcula terreno, obstáculos, altura, curvas, raio de giro, entradas/saídas, autonomia, zonas aeronáuticas nem sequenciamento operacional. A imagem de satélite é opcional e requer configuração Google; não há importação SHP nem vínculo automático com o sistema de bordo. KMZ é importado diretamente; a caneta cria polígonos com curvas e a ferramenta Selecionar move seus pontos e alças. KML precisa de coordenadas geográficas, mesmo quando o arquivo tem “UTM” no nome.
 
-Limites deliberados: arquivos de entrada até 8 MB, requisições até 10 MB, no modo WGS84/UTM por zona numérica, zona ordinária de 6° e latitudes −80° a 84° (outros sistemas via catálogo PROJ), até 2.000 vértices por anel/5.000 no conjunto de polígonos, 20.000 linhas/200.000 vértices de linhas. Polígonos precisam estar fechados, sem auto-interseções; furos precisam ficar estritamente dentro e não se tocar. Anéis muito detalhados devem ser tratados externamente sem perder os requisitos do levantamento.
+Limites deliberados: arquivos de entrada até 8 MB, requisições até 16 MB, no modo WGS84/UTM por zona numérica, zona ordinária de 6° e latitudes −80° a 84° (outros sistemas via catálogo PROJ), até 2.000 vértices por anel/5.000 no conjunto de polígonos, 20.000 linhas/200.000 vértices de linhas. Polígonos precisam estar fechados, sem auto-interseções; furos precisam ficar estritamente dentro e não se tocar. Anéis muito detalhados devem ser tratados externamente sem perder os requisitos do levantamento.
 
 Os arquivos reais foram lidos somente localmente; não estão incluídos neste pacote. O aplicativo não envia arquivos de missão, não grava sobre os originais e atende somente em 127.0.0.1. Os arquivos carregados ficam na memória da aplicação até você salvar o projeto ou fechar. A camada Google opcional transmite a área visualizada apenas após ativação. A janela da aplicação não registra coordenadas.
 
@@ -93,4 +101,4 @@ As licenças das bibliotecas distribuídas são instaladas como `THIRD-PARTY-NOT
 
 A revisão de layout aplica a nova marca SkyLab, organiza os comandos à esquerda, abre Sobre pelo nome, usa bandeiras para idiomas, move o exemplo para Ajuda e corrige o Ctrl+Z. Shift seleciona intervalos completos. Consulte GOOGLE-MAPS-CUSTOS.md para a pesquisa solicitada sobre gratuidade.
 
-A revisão otimizada mantém a versão 0.1. Consulte AUDITORIA-OTIMIZACAO-0.1.md para código removido, medições e validação.
+A revisão atual mantém a versão 0.2. O relatório da otimização anterior permanece como registro histórico. Consulte AUDITORIA-OTIMIZACAO-0.1.md para código removido, medições e validação.

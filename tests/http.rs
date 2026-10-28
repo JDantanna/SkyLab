@@ -197,4 +197,56 @@ fn local_server_serves_ui_and_validates_api() {
     );
     assert!(call(port, "GET", "/files/pending", "", None).contains("\"data\":null"));
     std::fs::remove_file(file).unwrap();
+    let shape = |layer: u32, x: f64| serde_json::json!({"layer":layer,"outer":[[x,7800000.],[x+1000.,7800000.],[x+1000.,7801000.],[x,7801000.],[x,7800000.]],"holes":[]});
+    let areas = serde_json::json!({"version":3,"crs":{"zone":23,"south":true},"lines":[],"polygons":[shape(1,500000.),shape(2,503000.)],"warnings":[],"layers":[{"id":1,"name":"First","source":"KML"},{"id":2,"name":"Second","source":"KML"}]});
+    let generated=call(port,"POST","/api",&serde_json::json!({"op":"generate","index":0,"project":areas,"settings":{"spacing":100.,"angle":0.,"offset":50.,"min_length":1.,"prefix":"L","first":1,"increment":1,"alternate":false}}).to_string(),None);
+    let generated: serde_json::Value =
+        serde_json::from_str(generated.split_once("\r\n\r\n").unwrap().1).unwrap();
+    assert_eq!(generated["ok"], true);
+    assert_eq!(generated["data"]["polygons"].as_array().unwrap().len(), 2);
+    assert!(
+        generated["data"]["layers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|l| l["id"] == 2)
+    );
+    for line in generated["data"]["lines"].as_array().unwrap() {
+        for point in line["points"].as_array().unwrap() {
+            assert!(point[0].as_f64().unwrap() <= 501000.);
+        }
+    }
+    let curve_points = vec![
+        serde_json::json!({"point":[500000.,7800000.],"outgoing":[500500.,7799500.]}),
+        serde_json::json!({"point":[501000.,7800000.],"incoming":[501000.,7799500.]}),
+        serde_json::json!({"point":[501000.,7801000.]}),
+        serde_json::json!({"point":[500000.,7801000.]}),
+    ];
+    let drawn=call(port,"POST","/api",&serde_json::json!({"op":"upsert-polygon","project":{"version":1,"crs":{"zone":23,"south":true},"polygons":[],"lines":[],"warnings":[]},"anchors":curve_points}).to_string(),None);
+    let drawn: serde_json::Value =
+        serde_json::from_str(drawn.split_once("\r\n\r\n").unwrap().1).unwrap();
+    assert_eq!(drawn["ok"], true);
+    assert_eq!(drawn["data"]["version"], 4);
+    let reprojected=call(port,"POST","/api",&serde_json::json!({"op":"reproject","project":drawn["data"],"crs":{"zone":23,"south":true,"authority":"EPSG:31983"}}).to_string(),None);
+    let reprojected: serde_json::Value =
+        serde_json::from_str(reprojected.split_once("\r\n\r\n").unwrap().1).unwrap();
+    assert_eq!(reprojected["ok"], true);
+    assert!(reprojected["data"]["polygons"][0]["curve"].is_null());
+    assert_eq!(
+        reprojected["data"]["polygons"][0]["outer"]
+            .as_array()
+            .unwrap()
+            .len(),
+        drawn["data"]["polygons"][0]["outer"]
+            .as_array()
+            .unwrap()
+            .len()
+    );
+    assert!(
+        reprojected["data"]["warnings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|text| text.as_str().unwrap_or("").contains("curves"))
+    );
 }
