@@ -1,18 +1,11 @@
-SkyLab 0.1
+SkyLab 0.1 — internal revision 3. The visible version remains 0.1.
 
-Interface refinements, internal revision 2. The visible version remains 0.1.
+- Pencil button in the workspace opens selection and cutting tools.
+- Drag a stroke across flight lines to split them, preserving original vertices and direction. Select unwanted sections by click or rectangle, then delete them.
+- Cutting and deletion support Ctrl+Z. Shift extends the selection; the review list follows the map selection.
+- Updates download a verified application package, apply it and restart SkyLab without opening another setup. Open project tabs, unsaved geometry, selection, view and input values are restored. Undo history starts a new session after restarting.
+- Failed application replacement restores the previous executable. Personal files, shortcuts and the uninstaller are preserved.
 
-- First number and increment use numeric inputs without sliders.
-- Borderless header icons and a logo menu aligned with the header and left edge.
-- Centred About dialog with SkyLab and SkyTEM logos and technical support details.
-- Explanatory tooltip for Append grid, available on hover and keyboard focus.
-- Smooth window appearance and a logo-to-workspace transition after loading completes.
+Installations from revision 2 or earlier require this installer once to receive the new internal updater. Close SkyLab and run the installer. Subsequent published revisions can be applied using the update icon inside SkyLab.
 
-Includes the native startup logo crash fix and update checks that recognize internal revisions of version 0.1. Older installations without revision updates require this installer once.
-
-- Compact logo menu and up to three independent project tabs.
-- Live previews with sliders for grid generation, trimming and splitting.
-- Integrated window controls and logo startup screen.
-- Update checks connected to JDantanna/SkyLab releases.
-
-Download the Windows installer, close SkyLab and run the installer to update. Existing personal projects are preserved. This release remains 0.1; a later version is published only after approval.
+Includes previous interface refinements, three project tabs, native window controls, branding and startup transition. Operational validation in the team's navigation system remains necessary before flight use.

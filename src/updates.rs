@@ -16,6 +16,8 @@ struct Manifest {
     revision: Option<u32>,
     download_url: Option<String>,
     notes: Option<String>,
+    package_url: Option<String>,
+    package_sha256: Option<String>,
 }
 #[derive(Debug, Serialize)]
 pub struct Check {
@@ -27,6 +29,11 @@ pub struct Check {
     pub download_url: Option<String>,
     pub notes: Option<String>,
     pub message: String,
+    pub package_url: Option<String>,
+    pub package_sha256: Option<String>,
+}
+pub fn valid_sha256(hash: &str) -> bool {
+    hash.len() == 64 && hash.bytes().all(|c| c.is_ascii_hexdigit())
 }
 pub fn build_revision() -> u32 {
     env!("SKYLAB_BUILD_REVISION")
@@ -51,7 +58,7 @@ fn release_version(tag: &str) -> Result<(&str, u32)> {
     version(number)?;
     Ok((number, revision))
 }
-fn version(s: &str) -> Result<[u32; 3]> {
+pub(crate) fn version(s: &str) -> Result<[u32; 3]> {
     let mut n = [0; 3];
     let parts: Vec<_> = s.split('.').collect();
     if !(2..=3).contains(&parts.len()) {
@@ -98,6 +105,8 @@ pub fn check_at(path: &Path) -> Result<Check> {
             download_url: None,
             notes: None,
             message: "Fonte de atualização não configurada.".into(),
+            package_url: None,
+            package_sha256: None,
         });
     }
     let config: Config = serde_json::from_str(&read(path)?)
@@ -151,6 +160,8 @@ pub fn check_at(path: &Path) -> Result<Check> {
     let newer = (version(&manifest.version)?, manifest.revision.unwrap_or(0))
         > (version(env!("CARGO_PKG_VERSION"))?, build_revision());
     Ok(Check {
+        package_url: manifest.package_url.filter(|url| safe_https(url)),
+        package_sha256: manifest.package_sha256.filter(|hash| valid_sha256(hash)),
         status: if newer { "available" } else { "up_to_date" }.into(),
         current_version: current,
         current_revision: build_revision(),
@@ -213,6 +224,7 @@ pub fn github_release(text: &str) -> Result<Check> {
         name: String,
         state: String,
         browser_download_url: String,
+        digest: Option<String>,
     }
     #[derive(Deserialize)]
     struct Release {
@@ -238,6 +250,8 @@ pub fn github_release(text: &str) -> Result<Check> {
         download_url: None,
         notes: None,
         message: "Nenhuma versão publicada no GitHub.".into(),
+        package_url: None,
+        package_sha256: None,
     };
     if release.no_release || release.draft || release.prerelease {
         return Ok(result);
@@ -251,6 +265,23 @@ pub fn github_release(text: &str) -> Result<Check> {
     result.latest_version = Some(latest.into());
     result.latest_revision = Some(revision);
     result.notes = release.body.map(|s| s.chars().take(4096).collect());
+    if let Some(asset) = release.assets.iter().find(|asset| {
+        asset.state == "uploaded"
+            && asset.name.starts_with("SkyLab-Update-")
+            && asset.name.ends_with(".zip")
+            && safe_https(&asset.browser_download_url)
+            && asset
+                .browser_download_url
+                .starts_with("https://github.com/JDantanna/SkyLab/releases/download/")
+    }) && let Some(hash) = asset
+        .digest
+        .as_deref()
+        .and_then(|s| s.strip_prefix("sha256:"))
+        .filter(|s| valid_sha256(s))
+    {
+        result.package_url = Some(asset.browser_download_url.clone());
+        result.package_sha256 = Some(hash.to_ascii_lowercase());
+    }
     result.download_url = release
         .assets
         .into_iter()

@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.1 — edição e atualização interna (revisão interna 3)
+
+- Botão de edição: seleção por clique/retângulo, corte por traço e exclusão da seleção.
+- Corte em Rust preserva vértices e sentido, com nomes distintos e desfazer por operação.
+- Atualização pelo GitHub verifica SHA256 e identidade, aplica após encerrar e reinicia sem outro instalador.
+- Restaura até três abas, inclusive projetos não salvos, seleção, enquadramento e campos. Histórico de desfazer reinicia após atualizar.
+- Falha na substituição recupera o executável anterior; preserva projetos pessoais, atalhos e desinstalador.
+- Instalações anteriores exigem uma instalação manual desta revisão para receber o novo atualizador.
+
 ## 0.1 — acabamento da interface (revisão interna 2)
 
 - Primeiro número e incremento mantêm edição numérica e deixam de abrir sliders.

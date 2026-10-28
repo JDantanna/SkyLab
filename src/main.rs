@@ -16,6 +16,9 @@ struct Request {
     index: Option<usize>,
     start: Option<f64>,
     end: Option<f64>,
+    stroke: Option<Vec<Point>>,
+    #[serde(default)]
+    geographic: bool,
 }
 fn process(r: Request) -> Result<Value> {
     if r.op == "inspect-crs" {
@@ -77,10 +80,22 @@ fn process(r: Request) -> Result<Value> {
     }
     let mut p = r.project.ok_or("Projeto ausente")?;
     // These public operations validate their input themselves; avoid repeating polygon topology work.
-    if !matches!(r.op.as_str(), "generate" | "export-mis" | "export-kml") {
+    if !matches!(
+        r.op.as_str(),
+        "generate" | "export-mis" | "export-kml" | "cut-stroke"
+    ) {
         p.validate()?;
     }
     match r.op.as_str() {
+        "cut-stroke" => {
+            let mut stroke = r.stroke.ok_or("Traço de corte ausente")?;
+            if r.geographic {
+                for point in &mut stroke {
+                    *point = p.crs.forward(*point)?;
+                }
+            }
+            return Ok(json!(editing::cut(&p, &stroke)?));
+        }
         "reproject" => {
             let target = r.crs.ok_or("Choose the target CRS")?;
             target.validate()?;
@@ -193,6 +208,31 @@ fn main() {
 }
 fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args().collect();
+    if args.get(1).is_some_and(|s| s == "--update-identity") {
+        println!(
+            "{}",
+            json!({"product":installation::PRODUCT,"version":updates::display_version(),"revision":updates::build_revision()})
+        );
+        return Ok(());
+    }
+    if args.get(1).is_some_and(|s| s == "--apply-update") {
+        if let Err(error) = self_update::apply_plan(std::path::Path::new(
+            args.get(2).ok_or("Plano de atualização ausente")?,
+        )) {
+            eprintln!("{error}");
+        }
+        return Ok(());
+    }
+    let updater = self_update::Manager::new();
+    let mut restore_path = args
+        .iter()
+        .position(|s| s == "--restore-session")
+        .and_then(|i| args.get(i + 1))
+        .map(std::path::PathBuf::from);
+    let restore_session = restore_path
+        .as_ref()
+        .map(|path| self_update::load_session(path))
+        .transpose()?;
     let port: u16 = if let Some(i) = args.iter().position(|s| s == "--port") {
         args.get(i + 1).ok_or("Falta porta")?.parse()?
     } else {
@@ -275,175 +315,210 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             continue;
         }
         let mut shutdown = false;
-        let (status, mime, body): (u16, &str, Cow<'static, str>) =
-            match (req.method().as_str(), req.url()) {
-                ("POST", "/activate") => {
-                    let child = desktop::open(&origin, false);
-                    if window.is_none() {
-                        window = child;
-                    }
-                    (200, "application/json", "{\"ok\":true}".into())
+        let (status, mime, body): (u16, &str, Cow<'static, str>) = match (
+            req.method().as_str(),
+            req.url(),
+        ) {
+            ("POST", "/activate") => {
+                let child = desktop::open(&origin, false);
+                if window.is_none() {
+                    window = child;
                 }
-                ("GET", "/skytem.svg") => (
+                (200, "application/json", "{\"ok\":true}".into())
+            }
+            ("GET", "/skytem.svg") => (
+                200,
+                "image/svg+xml",
+                include_str!("../assets/skytem-normal.svg").into(),
+            ),
+            ("GET", "/brand.svg") => (
+                200,
+                "image/svg+xml",
+                include_str!("../assets/skylab-icon.svg").into(),
+            ),
+            ("GET", "/window.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/window.js").into(),
+            ),
+            ("GET", "/window.css") => (
+                200,
+                "text/css; charset=utf-8",
+                include_str!("../web/window.css").into(),
+            ),
+            ("GET", "/updates/check") => match updates::check() {
+                Ok(check) => (
                     200,
-                    "image/svg+xml",
-                    include_str!("../assets/skytem-normal.svg").into(),
+                    "application/json",
+                    json!({"ok":true,"data":check}).to_string().into(),
                 ),
-                ("GET", "/brand.svg") => (
-                    200,
-                    "image/svg+xml",
-                    include_str!("../assets/skylab-icon.svg").into(),
+                Err(e) => (
+                    400,
+                    "application/json",
+                    json!({"ok":false,"error":e}).to_string().into(),
                 ),
-                ("GET", "/window.js") => (
-                    200,
-                    "text/javascript; charset=utf-8",
-                    include_str!("../web/window.js").into(),
+            },
+            ("GET", "/session/restore") => {
+                let error = restore_path
+                    .as_ref()
+                    .and_then(|path| path.parent())
+                    .and_then(|stage| std::fs::read(stage.join("result.json")).ok())
+                    .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+                    .and_then(|value| value["error"].as_str().map(str::to_owned));
+                (200,"application/json",json!({"ok":true,"data":restore_session.as_ref().map(|session|json!({"session":session,"error":error}))}).to_string().into())
+            }
+            ("POST", "/session/restored") => {
+                if let Some(path) = restore_path.take() {
+                    self_update::finish_restore(path);
+                }
+                (200, "application/json", "{\"ok\":true}".into())
+            }
+            ("GET", "/updates/progress") => (
+                200,
+                "application/json",
+                json!({"ok":true,"data":updater.progress()})
+                    .to_string()
+                    .into(),
+            ),
+            ("POST", "/updates/start") => match updater.start() {
+                Ok(()) => (200, "application/json", "{\"ok\":true}".into()),
+                Err(error) => (
+                    400,
+                    "application/json",
+                    json!({"ok":false,"error":error}).to_string().into(),
                 ),
-                ("GET", "/window.css") => (
-                    200,
-                    "text/css; charset=utf-8",
-                    include_str!("../web/window.css").into(),
-                ),
-                ("GET", "/updates/check") => match updates::check() {
-                    Ok(check) => (
+            },
+            ("POST", "/updates/apply") => {
+                let mut body = String::new();
+                let result=req.as_reader().take(40*1024*1024+1).read_to_string(&mut body).map_err(|e|e.to_string()).and_then(|_|if body.len()>40*1024*1024{Err("Sessão grande demais para atualização. Salve e feche os projetos antes de tentar novamente.".into())}else{serde_json::from_str::<Value>(&body).map_err(|e|e.to_string())}).and_then(|value|updater.apply(value));
+                match result {
+                    Ok(()) => (200, "application/json", "{\"ok\":true}".into()),
+                    Err(error) => (
+                        400,
+                        "application/json",
+                        json!({"ok":false,"error":error}).to_string().into(),
+                    ),
+                }
+            }
+            ("GET", "/heartbeat") => {
+                page_seen = true;
+                last_seen = std::time::Instant::now();
+                (200, "application/json", "{\"ok\":true}".into())
+            }
+            ("GET", "/identity") => (
+                200,
+                "text/plain",
+                format!(
+                    "skytem-skylab-local-planner native-window-v3 {}",
+                    updates::display_version()
+                )
+                .into(),
+            ),
+            ("POST", "/shutdown") => {
+                shutdown = true;
+                (200, "application/json", "{\"ok\":true}".into())
+            }
+            ("GET", "/") => (
+                200,
+                "text/html; charset=utf-8",
+                include_str!("../web/index.html")
+                    .replace("__VERSION__", updates::display_version())
+                    .into(),
+            ),
+            ("GET", "/editing.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/editing.js").into(),
+            ),
+            ("GET", "/updater.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/updater.js").into(),
+            ),
+            ("GET", "/session.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/session.js").into(),
+            ),
+            ("GET", "/studio.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/studio.js").into(),
+            ),
+            ("GET", "/app.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/app.js").into(),
+            ),
+            ("GET", "/interactions.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/interactions.js").into(),
+            ),
+            ("GET", "/controls.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/controls.js").into(),
+            ),
+            ("GET", "/flags/en.svg") => (
+                200,
+                "image/svg+xml",
+                include_str!("../assets/flags/en.svg").into(),
+            ),
+            ("GET", "/flags/pt-BR.svg") => (
+                200,
+                "image/svg+xml",
+                include_str!("../assets/flags/pt-BR.svg").into(),
+            ),
+            ("GET", "/flags/da.svg") => (
+                200,
+                "image/svg+xml",
+                include_str!("../assets/flags/da.svg").into(),
+            ),
+            ("GET", "/workspace.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/workspace.js").into(),
+            ),
+            ("GET", "/languages.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/languages.js").into(),
+            ),
+            ("GET", "/crs-catalog") => (200, "application/json", projection::CATALOG.into()),
+            ("GET", "/style.css") => (
+                200,
+                "text/css; charset=utf-8",
+                include_str!("../web/style.css").into(),
+            ),
+            ("POST", "/api") => {
+                let mut buf = String::new();
+                let read = req
+                    .as_reader()
+                    .take(10 * 1024 * 1024 + 1)
+                    .read_to_string(&mut buf);
+                let result = if read.is_err() || buf.len() > 10 * 1024 * 1024 {
+                    Err("Requisição inválida ou maior que 10 MB.".into())
+                } else {
+                    serde_json::from_str::<Request>(&buf)
+                        .map_err(|e| e.to_string())
+                        .and_then(process)
+                };
+                match result {
+                    Ok(v) => (
                         200,
                         "application/json",
-                        json!({"ok":true,"data":check}).to_string().into(),
+                        json!({"ok":true,"data":v}).to_string().into(),
                     ),
                     Err(e) => (
                         400,
                         "application/json",
                         json!({"ok":false,"error":e}).to_string().into(),
                     ),
-                },
-                ("POST", "/updates/open") => match updates::check() {
-                    Ok(check) if check.status == "available" && check.download_url.is_some() => {
-                        let url = check.download_url.unwrap();
-                        #[cfg(windows)]
-                        {
-                            let _ = desktop::hidden(
-                                std::process::Command::new("explorer.exe").arg(url),
-                            )
-                            .spawn();
-                        }
-                        (200, "application/json", "{\"ok\":true}".into())
-                    }
-                    _ => (
-                        400,
-                        "application/json",
-                        "{\"ok\":false,\"error\":\"Nenhum endereço de atualização disponível.\"}"
-                            .into(),
-                    ),
-                },
-                ("GET", "/heartbeat") => {
-                    page_seen = true;
-                    last_seen = std::time::Instant::now();
-                    (200, "application/json", "{\"ok\":true}".into())
                 }
-                ("GET", "/identity") => (
-                    200,
-                    "text/plain",
-                    format!(
-                        "skytem-skylab-local-planner native-window-v3 {}",
-                        updates::display_version()
-                    )
-                    .into(),
-                ),
-                ("POST", "/shutdown") => {
-                    shutdown = true;
-                    (200, "application/json", "{\"ok\":true}".into())
-                }
-                ("GET", "/") => (
-                    200,
-                    "text/html; charset=utf-8",
-                    include_str!("../web/index.html")
-                        .replace("__VERSION__", updates::display_version())
-                        .into(),
-                ),
-                ("GET", "/session.js") => (
-                    200,
-                    "text/javascript; charset=utf-8",
-                    include_str!("../web/session.js").into(),
-                ),
-                ("GET", "/studio.js") => (
-                    200,
-                    "text/javascript; charset=utf-8",
-                    include_str!("../web/studio.js").into(),
-                ),
-                ("GET", "/app.js") => (
-                    200,
-                    "text/javascript; charset=utf-8",
-                    include_str!("../web/app.js").into(),
-                ),
-                ("GET", "/interactions.js") => (
-                    200,
-                    "text/javascript; charset=utf-8",
-                    include_str!("../web/interactions.js").into(),
-                ),
-                ("GET", "/controls.js") => (
-                    200,
-                    "text/javascript; charset=utf-8",
-                    include_str!("../web/controls.js").into(),
-                ),
-                ("GET", "/flags/en.svg") => (
-                    200,
-                    "image/svg+xml",
-                    include_str!("../assets/flags/en.svg").into(),
-                ),
-                ("GET", "/flags/pt-BR.svg") => (
-                    200,
-                    "image/svg+xml",
-                    include_str!("../assets/flags/pt-BR.svg").into(),
-                ),
-                ("GET", "/flags/da.svg") => (
-                    200,
-                    "image/svg+xml",
-                    include_str!("../assets/flags/da.svg").into(),
-                ),
-                ("GET", "/workspace.js") => (
-                    200,
-                    "text/javascript; charset=utf-8",
-                    include_str!("../web/workspace.js").into(),
-                ),
-                ("GET", "/languages.js") => (
-                    200,
-                    "text/javascript; charset=utf-8",
-                    include_str!("../web/languages.js").into(),
-                ),
-                ("GET", "/crs-catalog") => (200, "application/json", projection::CATALOG.into()),
-                ("GET", "/style.css") => (
-                    200,
-                    "text/css; charset=utf-8",
-                    include_str!("../web/style.css").into(),
-                ),
-                ("POST", "/api") => {
-                    let mut buf = String::new();
-                    let read = req
-                        .as_reader()
-                        .take(10 * 1024 * 1024 + 1)
-                        .read_to_string(&mut buf);
-                    let result = if read.is_err() || buf.len() > 10 * 1024 * 1024 {
-                        Err("Requisição inválida ou maior que 10 MB.".into())
-                    } else {
-                        serde_json::from_str::<Request>(&buf)
-                            .map_err(|e| e.to_string())
-                            .and_then(process)
-                    };
-                    match result {
-                        Ok(v) => (
-                            200,
-                            "application/json",
-                            json!({"ok":true,"data":v}).to_string().into(),
-                        ),
-                        Err(e) => (
-                            400,
-                            "application/json",
-                            json!({"ok":false,"error":e}).to_string().into(),
-                        ),
-                    }
-                }
-                _ => (404, "text/plain", "Não encontrado".into()),
-            };
+            }
+            _ => (404, "text/plain", "Não encontrado".into()),
+        };
         // Static assets borrow embedded bytes; dynamic JSON/HTML keep their existing owned buffer.
         let bytes = body.as_bytes();
         let mut response = tiny_http::Response::new(

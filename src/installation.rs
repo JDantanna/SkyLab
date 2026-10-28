@@ -53,7 +53,9 @@ fn read_manifest(root: &Path) -> Result<Manifest> {
     let m: Manifest =
         serde_json::from_slice(&fs::read(root.join("installation.json")).map_err(err)?)
             .map_err(err)?;
-    if m.product != PRODUCT || m.root != root {
+    if m.product != PRODUCT
+        || fs::canonicalize(&m.root).map_err(err)? != fs::canonicalize(root).map_err(err)?
+    {
         return Err("A pasta não pertence a uma instalação SkyLab reconhecida.".into());
     }
     Ok(m)
@@ -285,6 +287,74 @@ fn check_app_closed(o: &Options) -> Result<()> {
     let app = o.root.join(APP);
     if app.exists() {
         fs::OpenOptions::new().write(true).open(app).map_err(|_|"Feche o SkyLab antes de continuar; verifique também a permissão de escrita na pasta.".to_owned())?;
+    }
+    Ok(())
+}
+/// Update only the owned application. Shortcuts, uninstaller and personal files stay in place.
+pub fn replace_application(o: &Options, source: &Path) -> Result<()> {
+    safe_root(o, true)?;
+    check_app_closed(o)?;
+    let old_manifest = fs::read(o.root.join("installation.json")).map_err(err)?;
+    let old = read_manifest(&o.root)?;
+    let mut magic = [0; 2];
+    fs::File::open(source)
+        .map_err(err)?
+        .read_exact(&mut magic)
+        .map_err(err)?;
+    if magic != *b"MZ" {
+        return Err("Pacote de atualização inválido.".into());
+    }
+    let target = o.root.join(APP);
+    let new = o.root.join("SkyLab-Rust.new.exe");
+    let previous = o.root.join("SkyLab-Rust.previous.exe");
+    fs::copy(source, &new).map_err(err)?;
+    if previous.exists() {
+        fs::remove_file(&previous).map_err(err)?;
+    }
+    fs::rename(&target, &previous).map_err(err)?;
+    let result = (|| {
+        fs::rename(&new, &target).map_err(err)?;
+        fs::write(
+            o.root.join("installation.json"),
+            serde_json::to_vec_pretty(&Manifest {
+                product: PRODUCT.into(),
+                version: VERSION.into(),
+                root: o.root.clone(),
+            })
+            .map_err(err)?,
+        )
+        .map_err(err)?;
+        run_script(include_str!("../scripts/update-registration.ps1"), o)
+    })();
+    if let Err(error) = result {
+        if target.exists() {
+            fs::remove_file(&target).map_err(err)?;
+        }
+        fs::rename(&previous, &target).map_err(err)?;
+        fs::write(o.root.join("installation.json"), old_manifest).map_err(err)?;
+        // Restore the previous display version even if registration failed partway through.
+        #[cfg(windows)]
+        {
+            let _ = desktop::hidden(
+                Command::new("powershell.exe")
+                    .args([
+                        "-NoProfile",
+                        "-NonInteractive",
+                        "-Command",
+                        include_str!("../scripts/update-registration.ps1"),
+                    ])
+                    .env("SKYLAB_INSTALL_ROOT", &o.root)
+                    .env(
+                        "SKYLAB_VERSION",
+                        old.version.strip_suffix(".0").unwrap_or(&old.version),
+                    )
+                    .env("SKYLAB_TEST_MODE", if o.test_mode { "1" } else { "0" }),
+            )
+            .output();
+        }
+        return Err(format!(
+            "Atualização não aplicada; versão anterior restaurada. {error}"
+        ));
     }
     Ok(())
 }

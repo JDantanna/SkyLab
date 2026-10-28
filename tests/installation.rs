@@ -86,6 +86,47 @@ fn invalid_payload_does_not_create_installation() {
     assert!(!o.root.exists());
     fs::remove_dir(parent).unwrap();
 }
+
+#[test]
+fn internal_update_preserves_uninstaller_shortcuts_and_personal_files_and_rolls_back_failure() {
+    let (parent, o) = temp();
+    installation::install(&o, b"MZ-original", b"MZ-setup").unwrap();
+    let shortcut = fs::read(o.root.join("test-shortcuts/SkyLab.lnk")).unwrap();
+    fs::write(o.root.join("personal.json"), "keep").unwrap();
+    let source = parent.join("update.exe");
+    fs::write(&source, b"MZ-updated").unwrap();
+    installation::replace_application(&o, &source).unwrap();
+    assert_eq!(fs::read(o.root.join(APP)).unwrap(), b"MZ-updated");
+    assert_eq!(fs::read(o.root.join(UNINSTALL)).unwrap(), b"MZ-setup");
+    assert_eq!(
+        fs::read(o.root.join("test-shortcuts/SkyLab.lnk")).unwrap(),
+        shortcut
+    );
+    assert_eq!(
+        fs::read_to_string(o.root.join("personal.json")).unwrap(),
+        "keep"
+    );
+    let manifest = fs::read(o.root.join("installation.json")).unwrap();
+    let registration = fs::read(o.root.join("test-registration.json")).unwrap();
+    fs::write(o.root.join("test-registration.json"), "invalid JSON").unwrap();
+    fs::write(&source, b"MZ-next").unwrap();
+    assert!(
+        installation::replace_application(&o, &source)
+            .unwrap_err()
+            .contains("restaurada")
+    );
+    assert_eq!(fs::read(o.root.join(APP)).unwrap(), b"MZ-updated");
+    assert_eq!(
+        fs::read(o.root.join("installation.json")).unwrap(),
+        manifest
+    );
+    fs::write(o.root.join("test-registration.json"), registration).unwrap();
+    installation::uninstall(&o).unwrap();
+    fs::remove_file(o.root.join("personal.json")).unwrap();
+    fs::remove_dir(&o.root).unwrap();
+    fs::remove_file(source).unwrap();
+    fs::remove_dir(parent).unwrap();
+}
 #[test]
 fn executable_source_is_copied_exactly_and_invalid_source_cannot_create_installation() {
     let (parent, o) = temp();

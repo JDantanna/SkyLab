@@ -13,6 +13,10 @@ using Microsoft.Web.WebView2.WinForms;
 internal static class Program {
     [DllImport("user32.dll")] private static extern bool SetProcessDPIAware();
     [STAThread] private static int Main(string[] args) {
+        if(args.Length==4&&(args[0]=="--download-update"||args[0]=="--unpack-update")) {
+            try{using(var output=Console.OpenStandardOutput())DownloadPackage(args[1],args[2],args[3],args[0]=="--unpack-update",output).GetAwaiter().GetResult();return 0;}
+            catch(Exception e){var bytes=System.Text.Encoding.UTF8.GetBytes(e.GetBaseException().Message);using(var output=Console.OpenStandardError())output.Write(bytes,0,bytes.Length);return 1;}
+        }
         if (args.Length > 1 && (args[0] == "--fetch-update" || args[0] == "--fetch-release")) {
             try { var bytes=System.Text.Encoding.UTF8.GetBytes(Fetch(args[1], args[0] == "--fetch-release").GetAwaiter().GetResult());using(var output=Console.OpenStandardOutput())output.Write(bytes,0,bytes.Length);return 0; }
             catch (Exception e) { var bytes=System.Text.Encoding.UTF8.GetBytes(e.GetBaseException().Message);using(var error=Console.OpenStandardError())error.Write(bytes,0,bytes.Length);return 1; }
@@ -33,6 +37,48 @@ internal static class Program {
             MessageBox.Show("Não foi possível abrir a janela do SkyLab.\n\n" + e.Message, "SkyLab", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
+    }
+    private static void Report(Stream output,long done,long total) {
+        long percent=total>0?Math.Min(90,done*90/total):0;
+        var bytes=System.Text.Encoding.UTF8.GetBytes("{\"bytes\":"+done+",\"total\":"+total+",\"percent\":"+percent+"}\n");output.Write(bytes,0,bytes.Length);output.Flush();
+    }
+    private static bool UpdateHost(Uri uri){return uri.Scheme=="https"&&String.IsNullOrEmpty(uri.UserInfo)&&(uri.Host=="github.com"||uri.Host=="release-assets.githubusercontent.com"||uri.Host=="objects.githubusercontent.com");}
+    private static async Task DownloadPackage(string source,string expected,string stage,bool local,Stream output) {
+        if(expected.Length!=64||!System.Text.RegularExpressions.Regex.IsMatch(expected,"\\A[0-9a-fA-F]{64}\\z"))throw new Exception("SHA256 inválido.");
+        string archive=Path.Combine(stage,"package.zip"),part=archive+".part",app=Path.Combine(stage,"SkyLab-Rust.exe");
+        if(!Directory.Exists(stage)||File.Exists(archive)||File.Exists(app))throw new Exception("Pasta do pacote inválida ou já utilizada.");
+        ServicePointManager.SecurityProtocol=SecurityProtocolType.Tls12;
+        try {
+            if(local) { using(var input=File.OpenRead(source))using(var target=new FileStream(part,FileMode.CreateNew,FileAccess.Write,FileShare.None)){if(input.Length>268435456)throw new Exception("Pacote muito grande.");await input.CopyToAsync(target);Report(output,input.Length,input.Length);} }
+            else {
+                Uri uri;if(!Uri.TryCreate(source,UriKind.Absolute,out uri)||!UpdateHost(uri)||!source.StartsWith("https://github.com/JDantanna/SkyLab/releases/download/",StringComparison.Ordinal))throw new Exception("Origem de atualização não autorizada.");
+                using(var cancel=new CancellationTokenSource(TimeSpan.FromMinutes(3)))
+                using(var handler=new HttpClientHandler{AllowAutoRedirect=false,UseCookies=false})
+                using(var client=new HttpClient(handler)) {
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd("SkyLab-Updater/0.1");client.Timeout=TimeSpan.FromMinutes(3);bool complete=false;
+                    for(int redirect=0;redirect<6;redirect++) {
+                        using(var response=await client.GetAsync(uri,HttpCompletionOption.ResponseHeadersRead,cancel.Token)) {
+                            int status=(int)response.StatusCode;
+                            if(status>=300&&status<400){var next=response.Headers.Location;if(next==null)throw new Exception("Redirecionamento inválido.");uri=next.IsAbsoluteUri?next:new Uri(uri,next);if(!UpdateHost(uri))throw new Exception("Redirecionamento de atualização não autorizado.");continue;}
+                            response.EnsureSuccessStatusCode();long total=response.Content.Headers.ContentLength??0;if(total>268435456)throw new Exception("Pacote muito grande.");
+                            using(var input=await response.Content.ReadAsStreamAsync())using(var target=new FileStream(part,FileMode.CreateNew,FileAccess.Write,FileShare.None)) {
+                                var buffer=new byte[81920];long done=0,last=-1;int read;while((read=await input.ReadAsync(buffer,0,buffer.Length,cancel.Token))>0){done+=read;if(done>268435456)throw new Exception("Pacote muito grande.");await target.WriteAsync(buffer,0,read,cancel.Token);long percent=total>0?done*90/total:done/1048576;if(percent!=last){last=percent;Report(output,done,total);}}
+                            }
+                            complete=true;break;
+                        }
+                    }
+                    if(!complete)throw new Exception("Redirecionamentos demais no download.");
+                }
+            }
+            using(var input=File.OpenRead(part))using(var sha=System.Security.Cryptography.SHA256.Create()){string actual=BitConverter.ToString(sha.ComputeHash(input)).Replace("-","");if(!actual.Equals(expected,StringComparison.OrdinalIgnoreCase))throw new Exception("A integridade do pacote não confere. Nada foi instalado.");}
+            File.Move(part,archive);
+            using(var input=File.OpenRead(archive))using(var zip=new System.IO.Compression.ZipArchive(input,System.IO.Compression.ZipArchiveMode.Read)) {
+                if(zip.Entries.Count!=1||zip.Entries[0].FullName!="SkyLab-Rust.exe"||zip.Entries[0].Length<2||zip.Entries[0].Length>268435456)throw new Exception("Conteúdo inesperado no pacote de atualização.");
+                using(var entry=zip.Entries[0].Open())using(var target=new FileStream(app,FileMode.CreateNew,FileAccess.Write,FileShare.None)) {var buffer=new byte[81920];int read;long done=0;while((read=await entry.ReadAsync(buffer,0,buffer.Length))>0){done+=read;if(done>268435456)throw new Exception("Aplicativo muito grande.");await target.WriteAsync(buffer,0,read);}if(done!=zip.Entries[0].Length)throw new Exception("Pacote incompleto.");}
+            }
+            using(var file=File.OpenRead(app)){if(file.ReadByte()!='M'||file.ReadByte()!='Z')throw new Exception("Aplicativo inválido no pacote.");}
+            long length=new FileInfo(archive).Length;Report(output,length,length);
+        } catch {if(File.Exists(part))File.Delete(part);if(File.Exists(app))File.Delete(app);throw;}
     }
     private static async Task<string> Fetch(string source, bool release) {
         Uri uri;

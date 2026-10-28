@@ -46,8 +46,11 @@ jobs:
           $asset = "SkyTEM-SkyLab-Setup-$($tag.Substring(1)).exe"
           Copy-Item -LiteralPath dist/SkyTEM-SkyLab-Setup.exe -Destination $asset
           $hash = (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash.ToLower()
-          "$hash  $asset" | Set-Content -Encoding utf8NoBOM SHA256SUMS.txt
+          $package = "SkyLab-Update-$($tag.Substring(1)).zip"
+          Compress-Archive -LiteralPath payload/SkyLab-Rust.exe -DestinationPath $package
+          $packageHash = (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash.ToLower()
+          @("$hash  $asset", "$packageHash  $package") | Set-Content -Encoding utf8NoBOM SHA256SUMS.txt
           gh release view $tag *> $null
           if ($LASTEXITCODE -eq 0) { Write-Output 'Release already published; keeping its original installer'; exit 0 }
-          gh release create $tag $asset SHA256SUMS.txt --target $env:GITHUB_SHA --title "SkyLab $env:SKYLAB_LABEL" --notes-file RELEASE-NOTES.md --latest
+          gh release create $tag $asset $package SHA256SUMS.txt --target $env:GITHUB_SHA --title "SkyLab $env:SKYLAB_LABEL" --notes-file RELEASE-NOTES.md --latest
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

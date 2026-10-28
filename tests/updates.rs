@@ -146,3 +146,39 @@ fn remote_source_must_be_https() {
         assert!(!updates::safe_https(url));
     }
 }
+
+#[test]
+fn internal_package_requires_a_trusted_uploaded_asset_and_sha256_digest() {
+    let url =
+        "https://github.com/JDantanna/SkyLab/releases/download/v0.2-r1/SkyLab-Update-0.2-r1.zip";
+    let hash = "a".repeat(64);
+    let mut release = serde_json::json!({"tag_name":"v0.2-r1","assets":[
+        {"name":"SkyTEM-SkyLab-Setup-0.2-r1.exe","state":"uploaded","browser_download_url":"https://github.com/JDantanna/SkyLab/releases/download/v0.2-r1/setup.exe"},
+        {"name":"SkyLab-Update-0.2-r1.zip","state":"uploaded","browser_download_url":url,"digest":format!("sha256:{hash}")}
+    ]});
+    let check = updates::github_release(&release.to_string()).unwrap();
+    assert_eq!(check.package_url.as_deref(), Some(url));
+    assert_eq!(check.package_sha256.as_deref(), Some(hash.as_str()));
+    for digest in [
+        serde_json::Value::Null,
+        serde_json::json!("sha256:invalid"),
+        serde_json::json!("md5:abc"),
+    ] {
+        release["assets"][1]["digest"] = digest;
+        assert!(
+            updates::github_release(&release.to_string())
+                .unwrap()
+                .package_sha256
+                .is_none()
+        );
+    }
+    release["assets"][1]["digest"] = serde_json::json!(format!("sha256:{hash}"));
+    release["assets"][1]["browser_download_url"] =
+        serde_json::json!("https://example.com/update.zip");
+    assert!(
+        updates::github_release(&release.to_string())
+            .unwrap()
+            .package_url
+            .is_none()
+    );
+}

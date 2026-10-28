@@ -1,0 +1,4 @@
+const test=require('node:test'),assert=require('node:assert/strict'),tools=require('../web/interactions.js');
+test('marquee selects a line crossing the box even when both endpoints lie outside',()=>{assert.deepEqual(tools.boxHits([[[-10,5],[20,5]],[[20,20],[30,30]],[[5,-10],[5,20]]],[0,0],[10,10]),[0,2]);assert.deepEqual(tools.boxHits([[[-10,5],[20,5]]],[10,10],[0,0]),[0]);});
+test('nearest selection uses distance to every segment including flown turns',()=>{assert.equal(tools.hitIndex([[[0,0],[100,0],[100,100]],[[0,50],[100,50]]],[98,80]),0);assert.equal(tools.hitIndex([[[0,0],[100,0]]],[20,30]),-1);});
+test('knife simplification retains bends and removes collinear pointer samples',()=>{assert.deepEqual(tools.simplifyStroke([[0,0],[1,0],[2,0],[3,0],[4,0]],0.1),[[0,0],[4,0]]);assert.deepEqual(tools.simplifyStroke([[0,0],[5,0],[5,5]],0.1),[[0,0],[5,0],[5,5]]);});

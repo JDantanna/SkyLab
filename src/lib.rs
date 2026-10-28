@@ -2,8 +2,10 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::Write as _;
 pub mod desktop;
+pub mod editing;
 pub mod installation;
 pub mod projection;
+pub mod self_update;
 pub mod updates;
 pub type Result<T> = std::result::Result<T, String>;
 pub type Point = [f64; 2];
