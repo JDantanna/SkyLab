@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 Push-Location (Split-Path -Parent $PSScriptRoot)
 try {
+    & "$PSScriptRoot/test-native-startup.ps1"
     node --test tests/interactions.cjs tests/session.cjs
     if ($LASTEXITCODE -ne 0) { throw 'Testes de interação falharam.' }
     cargo test --offline

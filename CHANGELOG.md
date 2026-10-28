@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 0.1 — correção da abertura (sem avanço de versão)
+
+- Corrigida exceção `Intervalo solicitado ultrapassa o fim da matriz` na conversão da logo do splash pelo .NET Framework. Os quadros PNG do ICO são renderizados pelo identificador nativo do Windows.
+- Teste da criação das janelas do aplicativo e do instalador, com a logo de 128 px visível, incluído na compilação obrigatória.
+- Falhas genéricas de abertura não são mais apresentadas como falta do WebView2 sem confirmação.
+
 ## 0.1 — abas e prévias (sem avanço de versão)
 
 - Cabeçalho compacto com menu na logo, efeito de hover e controles de atualização e idioma.

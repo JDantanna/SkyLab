@@ -30,7 +30,7 @@ internal static class Program {
             }
             return 0;
         } catch (Exception e) {
-            MessageBox.Show("Não foi possível abrir a janela do SkyLab. Verifique a instalação do Microsoft Edge WebView2 Runtime.\n\n" + e.Message, "SkyLab", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show("Não foi possível abrir a janela do SkyLab.\n\n" + e.Message, "SkyLab", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
     }
@@ -94,7 +94,8 @@ internal sealed class ShellWindow : Form {
         Size=new Size(Math.Min((int)Math.Round((setup?920:1380)*uiScale),area.Width-30),Math.Min((int)Math.Round((setup?670:920)*uiScale),area.Height-30));MaximizedBounds=area;
         try { Icon=new Icon(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"app.ico")); } catch { }
         loading.Dock=DockStyle.Fill;loading.SizeMode=PictureBoxSizeMode.CenterImage;
-        if (Icon != null) loading.Image=new Icon(Icon,128,128).ToBitmap();
+        // ICO frames contain PNG data. Framework Icon.ToBitmap() misreads these frames.
+        if (Icon != null) using(var splashIcon=new Icon(Icon,128,128))loading.Image=Bitmap.FromHicon(splashIcon.Handle);
         Controls.Add(loading);browser.Dock=DockStyle.Fill;browser.DefaultBackgroundColor=BackColor;browser.Visible=false;Controls.Add(browser);browser.BringToFront();
         caption.BackColor=BackColor;caption.Anchor=AnchorStyles.Top|AnchorStyles.Right;captionButtons=new[]{new CaptionButton("minimize",this),new CaptionButton("maximize",this),new CaptionButton("close",this)};
         foreach(var button in captionButtons){var command=button.Command;button.Click+=delegate{RunCommand(command);};caption.Controls.Add(button);}
