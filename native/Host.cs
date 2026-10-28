@@ -86,6 +86,7 @@ internal sealed class ShellWindow : Form {
     public ShellWindow(Uri uri, bool setup) {
         target=uri; Text=setup?"SkyLab — Instalação":"SkyLab";
         FormBorderStyle=FormBorderStyle.None; BackColor=Color.FromArgb(14,36,85);
+        Opacity=SystemInformation.UIEffectsEnabled?0:1;
         StartPosition=FormStartPosition.CenterScreen; Padding=new Padding(1);
         var area=Screen.PrimaryScreen.WorkingArea;double uiScale;
         using(var graphics=Graphics.FromHwnd(IntPtr.Zero)){uiScale=graphics.DpiX/96.0;}
@@ -111,6 +112,13 @@ internal sealed class ShellWindow : Form {
     private async void Initialize(object sender,EventArgs e) {
         try {
             ShowWindow(Handle,1);
+            var fade=System.Diagnostics.Stopwatch.StartNew();
+            while(!IsDisposed && Opacity<1) {
+                double progress=Math.Min(1,fade.Elapsed.TotalMilliseconds/220);
+                Opacity=progress*progress*(3-2*progress);
+                await Task.Delay(15);
+            }
+            if(IsDisposed)return;
             var folder=Environment.GetEnvironmentVariable("SKYLAB_WEBVIEW_PROFILE");
             if(String.IsNullOrEmpty(folder))folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"SkyTEM","SkyLab","WebView2");
             var env=await CoreWebView2Environment.CreateAsync(null,folder);
@@ -156,7 +164,7 @@ internal sealed class ShellWindow : Form {
             browser.CoreWebView2.WindowCloseRequested+=delegate{allowClose=true;Close();};
             browser.CoreWebView2.WebMessageReceived+=Message;
             browser.CoreWebView2.DocumentTitleChanged+=delegate{Text=browser.CoreWebView2.DocumentTitle;};
-            browser.CoreWebView2.NavigationCompleted+=delegate { ready=true;browser.Visible=true;loading.Visible=false;caption.BringToFront(); };
+            browser.CoreWebView2.NavigationCompleted+=delegate { ready=true;browser.Visible=true;loading.Visible=false;caption.BringToFront();browser.CoreWebView2.PostWebMessageAsString("startup-ready"); };
             browser.Source=target;
         } catch(Exception ex) { MessageBox.Show("Não foi possível carregar a interface.\n\n"+ex.Message,"SkyLab",MessageBoxButtons.OK,MessageBoxIcon.Error);allowClose=true;Close(); }
     }

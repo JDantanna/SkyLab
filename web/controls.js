@@ -9,6 +9,18 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLanguages();});
 const demoAction=$('demo').onclick;$('demo').onclick=()=>{$('help-dialog').close();demoAction();};
 updateLanguageFlag();
 
+const appendOption=$('append-info').closest('.append-option'),appendHelp=$('append-explanation');
+function hideAppendHelp(){appendHelp.hidden=true;$('append-info').setAttribute('aria-expanded','false');}
+function showAppendHelp(){appendHelp.hidden=false;const anchor=appendOption.getBoundingClientRect(),height=appendHelp.offsetHeight;appendHelp.style.left=Math.max(8,Math.min(anchor.left,innerWidth-appendHelp.offsetWidth-8))+'px';appendHelp.style.top=Math.max(8,Math.min(anchor.top-height-9>=8?anchor.top-height-9:anchor.bottom+9,innerHeight-height-8))+'px';$('append-info').setAttribute('aria-expanded','true');}
+appendOption.addEventListener('pointerenter',showAppendHelp);
+appendOption.addEventListener('pointerleave',()=>{if(!appendOption.contains(document.activeElement))hideAppendHelp();});
+appendOption.addEventListener('focusin',showAppendHelp);
+appendOption.addEventListener('focusout',event=>{if(!appendOption.contains(event.relatedTarget))hideAppendHelp();});
+$('append-info').onclick=showAppendHelp;
+document.addEventListener('keydown',event=>{if(event.key==='Escape')hideAppendHelp();});
+document.addEventListener('pointerdown',event=>{if(!event.target.closest('.append-option'))hideAppendHelp();});
+window.addEventListener('scroll',hideAppendHelp,true);window.addEventListener('resize',hideAppendHelp);
+
 function closeProductMenu(){$('product-menu').hidden=true;$('product-menu-toggle').setAttribute('aria-expanded','false');}
 $('product-menu-toggle').onclick=()=>{closeLanguages();const menu=$('product-menu');menu.hidden=!menu.hidden;$('product-menu-toggle').setAttribute('aria-expanded',String(!menu.hidden));if(!menu.hidden)menu.querySelector('button:not(:disabled)').focus();};
 $('product-menu').addEventListener('click',e=>{if(e.target.closest('button')&&!e.target.closest('button').disabled)closeProductMenu();});

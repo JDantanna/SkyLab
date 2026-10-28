@@ -284,6 +284,11 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                     }
                     (200, "application/json", "{\"ok\":true}".into())
                 }
+                ("GET", "/skytem.svg") => (
+                    200,
+                    "image/svg+xml",
+                    include_str!("../assets/skytem-normal.svg").into(),
+                ),
                 ("GET", "/brand.svg") => (
                     200,
                     "image/svg+xml",

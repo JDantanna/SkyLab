@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.1 — acabamento da interface (revisão interna 2)
+
+- Primeiro número e incremento mantêm edição numérica e deixam de abrir sliders.
+- Ícones do cabeçalho sem borda, com indicação de hover e foco por teclado.
+- Menu da logo alinhado à margem esquerda e ao cabeçalho, com a mesma cor azul.
+- Sobre centralizado, com logos SkyLab/SkyTEM, SkyTEM Survey Laboratory e suporte +45 29 84 36 90; retirada a consulta de atualização desse diálogo.
+- Adicionar malha preservado por solicitação do usuário, com explicação no hover e no foco por teclado.
+- Entrada suave da janela e transição da logo para a interface após confirmação de carregamento pelo adaptador nativo.
+
 ## 0.1 — atualizador e distribuição
 
 - Controle de revisão interna para reconhecer correções sem mudar a versão 0.1.
