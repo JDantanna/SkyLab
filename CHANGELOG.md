@@ -1,6 +1,6 @@
 # Histórico de versões
 
-## 0.2 — painéis e integração com arquivos (revisão interna 1)
+## 0.2 — painéis e integração com arquivos (revisão interna 2)
 
 - Painéis móveis e redimensionáveis com encaixe lateral/inferior, posições flutuantes internas, minimizar, ocultar e restaurar layout persistente.
 - Ferramenta mão e navegação temporária com Espaço, devolvendo seleção/corte ao soltar.

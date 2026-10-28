@@ -1,4 +1,4 @@
-SkyLab 0.2 — internal revision 1.
+SkyLab 0.2 — internal revision 2.
 
 - Modular panels: drag and resize layers, grid, review, selected line, distance trimming and batch actions. Dock left, right or below the map, or float within the SkyLab workspace. Minimize, hide, reopen and reset the saved layout from Help > Panels.
 - Hand tool beside Select and Cut. Hold Space to pan while editing and release it to restore the previous tool; the selection stays intact.
