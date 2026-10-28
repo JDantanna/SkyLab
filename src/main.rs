@@ -271,6 +271,15 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => return Err(e.into()),
     };
+    let recovery = if args.iter().any(|s| s == "--no-open")
+        && std::env::var_os("SKYLAB_RECOVERY_DIR").is_none()
+    {
+        recovery::Recovery::at(
+            std::env::temp_dir().join(format!("SkyLab-Test-Recovery-{}", std::process::id())),
+        )
+    } else {
+        recovery::Recovery::default()
+    };
     let actual = listener.local_addr()?.port();
     let origin = format!("http://127.0.0.1:{actual}");
     let server = tiny_http::Server::from_listener(listener, None).map_err(|e| e.to_string())?;
@@ -285,11 +294,13 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let mut last_seen = std::time::Instant::now();
     let mut page_seen = false;
     let expected_host = format!("127.0.0.1:{actual}");
+    let mut clean_shutdown = false;
     loop {
-        if window
+        if let Some(exit) = window
             .as_mut()
-            .is_some_and(|child| child.try_wait().ok().flatten().is_some())
+            .and_then(|child| child.try_wait().ok().flatten())
         {
+            clean_shutdown = exit.success();
             break;
         }
         let Some(mut req) = server.recv_timeout(std::time::Duration::from_secs(1))? else {
@@ -346,6 +357,50 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 "text/css; charset=utf-8",
                 include_str!("../web/window.css").into(),
             ),
+            ("GET", "/recovery") => match recovery.load() {
+                Ok(data) => (
+                    200,
+                    "application/json",
+                    json!({"ok":true,"data":data}).to_string().into(),
+                ),
+                Err(error) => (
+                    400,
+                    "application/json",
+                    json!({"ok":false,"error":error}).to_string().into(),
+                ),
+            },
+            ("POST", "/recovery") => {
+                let mut body = String::new();
+                let result = req
+                    .as_reader()
+                    .take(40 * 1024 * 1024 + 1)
+                    .read_to_string(&mut body)
+                    .map_err(|e| e.to_string())
+                    .and_then(|_| {
+                        if body.len() > 40 * 1024 * 1024 {
+                            Err("Sessão grande demais.".into())
+                        } else {
+                            serde_json::from_str::<Value>(&body).map_err(|e| e.to_string())
+                        }
+                    })
+                    .and_then(|session| recovery.save(session));
+                match result {
+                    Ok(()) => (200, "application/json", "{\"ok\":true}".into()),
+                    Err(error) => (
+                        400,
+                        "application/json",
+                        json!({"ok":false,"error":error}).to_string().into(),
+                    ),
+                }
+            }
+            ("POST", "/recovery/clear") => match recovery.clear() {
+                Ok(()) => (200, "application/json", "{\"ok\":true}".into()),
+                Err(error) => (
+                    400,
+                    "application/json",
+                    json!({"ok":false,"error":error}).to_string().into(),
+                ),
+            },
             ("GET", "/updates/check") => match updates::check() {
                 Ok(check) => (
                     200,
@@ -424,6 +479,36 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 include_str!("../web/index.html")
                     .replace("__VERSION__", updates::display_version())
                     .into(),
+            ),
+            ("GET", "/home.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/home.js").into(),
+            ),
+            ("GET", "/hotkeys.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/hotkeys.js").into(),
+            ),
+            ("GET", "/recovery.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/recovery.js").into(),
+            ),
+            ("GET", "/xyz.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/xyz.js").into(),
+            ),
+            ("GET", "/keybindings.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/keybindings.js").into(),
+            ),
+            ("GET", "/tiles.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/tiles.js").into(),
             ),
             ("GET", "/editing.js") => (
                 200,
@@ -542,8 +627,12 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         }
         let _ = req.respond(response);
         if shutdown {
+            clean_shutdown = true;
             break;
         }
+    }
+    if clean_shutdown {
+        let _ = recovery.clear();
     }
     Ok(())
 }

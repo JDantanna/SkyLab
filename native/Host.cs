@@ -110,7 +110,7 @@ internal sealed class ShellWindow : Form {
     private readonly Uri target;
     private readonly Panel caption = new Panel();
     private readonly CaptionButton[] captionButtons;
-    private bool allowClose, checkingClose, ready;
+    private bool allowClose, checkingClose, ready, pagePainted, startupShown;
     private readonly PictureBox loading = new PictureBox();
     [DllImport("user32.dll")] private static extern bool ReleaseCapture();
     [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr h, int msg, IntPtr w, IntPtr l);
@@ -210,13 +210,16 @@ internal sealed class ShellWindow : Form {
             browser.CoreWebView2.WindowCloseRequested+=delegate{allowClose=true;Close();};
             browser.CoreWebView2.WebMessageReceived+=Message;
             browser.CoreWebView2.DocumentTitleChanged+=delegate{Text=browser.CoreWebView2.DocumentTitle;};
-            browser.CoreWebView2.NavigationCompleted+=delegate { ready=true;browser.Visible=true;loading.Visible=false;caption.BringToFront();browser.CoreWebView2.PostWebMessageAsString("startup-ready"); };
+            browser.CoreWebView2.NavigationCompleted+=delegate { ready=true;if(pagePainted)RevealPage(); };
+            browser.Visible=true;loading.BringToFront();caption.BringToFront();
             browser.Source=target;
         } catch(Exception ex) { MessageBox.Show("Não foi possível carregar a interface.\n\n"+ex.Message,"SkyLab",MessageBoxButtons.OK,MessageBoxIcon.Error);allowClose=true;Close(); }
     }
+    private void RevealPage(){if(startupShown)return;startupShown=true;loading.Visible=false;caption.BringToFront();browser.CoreWebView2.PostWebMessageAsString("startup-ready");}
     private void Message(object sender,CoreWebView2WebMessageReceivedEventArgs e) {
         Uri source;if(!Uri.TryCreate(e.Source,UriKind.Absolute,out source)||source.GetLeftPart(UriPartial.Authority)!=target.GetLeftPart(UriPartial.Authority))return;
         string command;try{command=e.TryGetWebMessageAsString();}catch{return;}
+        if(command=="startup-painted"){pagePainted=true;if(ready)RevealPage();return;}
         if(command.StartsWith("caption:")){var parts=command.Split(':');double height,scale;if(parts.Length==3&&Double.TryParse(parts[1],System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out height)&&Double.TryParse(parts[2],System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out scale)&&height>=40&&height<=100&&scale>=0.5&&scale<=4)LayoutCaption(height,scale);return;}
         RunCommand(command);
     }

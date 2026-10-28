@@ -1,29 +1,9 @@
-# Google Maps: opções de uso sem cobrança
+# Google no QGIS e no SkyLab — verificação em 28/10/2026
 
-Consulta às fontes oficiais em 27/10/2026. Preços e franquias podem mudar; a conta da empresa deve ser conferida antes da ativação.
+O QuickMapServices instalado neste computador contém `Contribute/data_sources/google_sat/metadata.ini`, com URL `https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}` e zoom máximo 20. O plugin cria uma camada raster `type=xyz`; não fornece uma API própria nem uma chave paga da NextGIS. A variante Hybrid usa `lyrs=y`.
 
-## Editor atual: Maps JavaScript API
+A mesma definição está no [repositório oficial de contribuições do QuickMapServices](https://github.com/nextgis/quickmapservices_contrib/blob/master/data_sources/google_sat/metadata.ini). A [documentação QGIS de conexões XYZ](https://documentation.qgis.org/3.44/en/docs/user_manual/managing_data_source/opening_data.html#using-xyz-tile-services) explica o carregamento por URL e inclui um exemplo Google Maps. São blocos de imagem identificados por nível de zoom e índices X/Y.
 
-O SkyLab usa o mapa dinâmico oficial, com imagem de satélite e OverlayView para manter as linhas alinhadas. A tabela global atual oferece **10.000 eventos mensais gratuitos para Dynamic Maps**. A cobrança começa ao ultrapassar a franquia aplicável. É necessário habilitar faturamento e fornecer uma chave da API, mesmo quando o uso permanece gratuito.
+O SkyLab oferece esse acesso XYZ como opção, após ativação pelo operador, e o teste local carregou imagens reais de satélite sob um projeto inteiramente sintético, sem chave de API. Isso comprova funcionamento técnico na data do teste. Não estabelece licença de redistribuição, garantia de continuidade ou franquia gratuita oficial. A [FAQ do Google](https://developers.google.com/maps/faq) descreve restrições ao acesso a mapas/imagens por mecanismos fora da Maps Platform; as [condições do Google Maps](https://www.google.com/help/terms_maps.html) continuam aplicáveis. Não há burla de autenticação ou criação de chaves no SkyLab.
 
-Portanto, é possível operar sem cobrança dentro da franquia, mas não existe garantia de gratuidade ilimitada. O uso é agregado entre projetos da conta de faturamento segundo as regras do Google. A TI deve conferir todos os consumidores da conta, restringir a chave, desabilitar APIs desnecessárias e configurar cotas quando disponíveis. Alertas de orçamento apenas avisam; não são um bloqueio automático de cobrança. Não foi configurada nenhuma conta, chave, assinatura ou faturamento nesta entrega.
-
-O SkyLab mantém a mesma instância do mapa ao desligar/religar a camada na mesma sessão, evitando recriar o mapa desnecessariamente. A camada permanece opcional e desligada ao abrir o programa. Os arquivos locais e a camada vetorial funcionam sem Google.
-
-Fontes: [tabela de preços](https://developers.google.com/maps/billing-and-pricing/pricing), [uso e faturamento JavaScript](https://developers.google.com/maps/documentation/javascript/usage-and-billing), [controle de uso](https://developers.google.com/maps/billing-and-pricing/manage-costs).
-
-## API gratuita distinta: Maps Embed
-
-A Maps Embed API tem uso gratuito e ilimitado, exigindo chave. Ela oferece um mapa incorporado. Não substitui diretamente a integração atual de edição com OverlayView e controle de câmera; não foi implementada como fundo do editor. Uma referência separada por mapa incorporado pode ser avaliada se esse fluxo for desejado.
-
-Fonte: [Maps Embed — uso e faturamento](https://developers.google.com/maps/documentation/embed/usage-and-billing).
-
-## Acesso direto ao site do Google
-
-A documentação oficial informa que imagens e tiles devem ser acessados por Google Maps Platform. Usar URLs internas/não documentadas do site para contornar a cobrança não é uma alternativa autorizada pelo Google. Não foram adicionadas conexões desse tipo ao programa.
-
-Fonte: [FAQ oficial — acesso a tiles/imagens](https://developers.google.com/maps/faq).
-
-## Situação desta entrega
-
-A integração existente continua disponível para uma chave habilitada da empresa. Nenhuma imagem real foi consultada nem enviada missão ao Google durante os testes. Não há compromisso de cobrança nem chave embutida no instalador. Se o requisito for custo obrigatoriamente zero independentemente do volume, a integração atual depende de uma política de cotas da conta; alternativamente será necessário escolher uma fonte de imagens cuja licença e condições atendam a esse requisito.
+A implementação pede somente os blocos visíveis, mantém atribuição e link aos termos, não pré-carrega áreas nem oferece download offline. O usuário pode desligar a imagem a qualquer momento. O caminho Google Maps Platform com chave continua separado e preserva o renderizador oficial, cobrança e condições da conta correspondente.

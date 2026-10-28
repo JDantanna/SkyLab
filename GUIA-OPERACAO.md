@@ -1,5 +1,17 @@
 # SkyLab 0.1 — revisão de operação
 
+## Tela inicial e atalhos
+
+O programa abre sem projetos e sem abas. Use Novo projeto (Ctrl+N), Abrir (Ctrl+O) ou arraste um arquivo para a tela inicial. Fechar a última aba retorna a essa tela.
+
+Ajuda → Atalhos de teclado, ou F1, permite mudar os atalhos. A ordem e os valores iniciais são: Novo projeto Ctrl+N; Abrir/importar Ctrl+O; Salvar Ctrl+S; Excluir Delete; Selecionar V; Cortar Q. Clique no campo e pressione a combinação; conflitos e combinações reservadas são recusados. Preferências ficam no computador. Ctrl+Z/Ctrl+Y continuam disponíveis. Digitar em campos não aciona atalhos simples como V, Q ou Delete.
+
+## Recuperação automática
+
+A cada 90 segundos, uma cópia local das abas, projetos, seleção, enquadramento e parâmetros é gravada. O ícone ao lado da atualização gira durante a gravação e seu tooltip indica o último salvamento ou uma falha. O arquivo anterior só é substituído após concluir a gravação da nova cópia. A cópia não substitui Salvar projeto.
+
+Após uma interrupção inesperada, a próxima abertura oferece Recuperar ou Descartar. O histórico de desfazer inicia uma nova sessão. Fechar normalmente limpa o cache de recuperação, preservando os arquivos de projeto salvos. Dados de recuperação não são enviados a serviços externos.
+
 ## Abrir e trabalhar
 
 O idioma inicial de um perfil novo é English, independentemente do idioma do Windows. O seletor por bandeira permite English, Português (Brasil) e Dansk; a escolha fica neste computador. Os projetos não mudam de idioma e os nomes das linhas não são traduzidos.
@@ -30,7 +42,7 @@ Salvar e exportar usam o diálogo nativo de arquivos. O programa só informa suc
 
 ## Corte por traço
 
-Clique no lápis junto de Satélite e Enquadrar para abrir as ferramentas. Em **Cut with stroke**, pressione e arraste sobre as linhas para dividi-las onde houver interseção. Os vértices originais, as curvas e o sentido são preservados; os trechos recebem nomes distintos. O corte não apaga nenhum trecho.
+Clique no lápis junto de Satélite e Enquadrar para abrir as ferramentas. Em **Cut with stroke**, pressione e arraste sobre as linhas para dividi-las onde houver interseção. Os vértices originais, as curvas e o sentido são preservados; os trechos recebem nomes distintos. O corte não apaga nenhum trecho. Os trechos resultantes ficam selecionados, em tonalidades alternadas, preservando também a seleção de linhas não cortadas.
 
 Em **Select**, clique em um trecho ou arraste um retângulo para selecionar vários; Shift acrescenta ao conjunto. A lista acompanha o destaque do mapa. Use **Delete selected lines** ou Delete para excluir. Ctrl+Z desfaz cada corte ou exclusão como uma operação. Desative o lápis para voltar ao arrasto de navegação do mapa. Traços sobrepostos ao longo de uma linha não criam cortes; cruze a linha na posição desejada.
 
@@ -54,13 +66,13 @@ Projetos que armazenam uma autoridade de CRS usam formato JSON de projeto 2, par
 
 ## Satélite opcional
 
-O botão Satellite liga/desliga a imagem. A primeira ativação pede uma chave **Google Maps Platform**, com **Maps JavaScript API**, faturamento e restrições adequadas ao aplicativo configurados pela empresa. Não existe chave incluída no código ou no instalador. A chave pode ser usada apenas na sessão ou, mediante seleção do usuário, guardada no perfil local. Não é um cofre de credenciais. A TI deve restringir a chave e as cotas.
+O botão Satellite liga/desliga a imagem e permite escolher Google Satellite, Google Hybrid ou Google Maps via XYZ, ou a conexão Google Maps Platform com chave.
 
-A implementação usa o renderizador oficial Google Maps com o tipo satellite, logo, atribuições e links próprios do Google; não usa URLs de tiles não documentadas. A empresa deve cumprir as políticas do Google e disponibilizar seus termos e política de privacidade antes da distribuição dessa integração. Uso pode ser cobrado pelo Google. Referências: [configuração](https://developers.google.com/maps/documentation/javascript/get-api-key), [políticas](https://developers.google.com/maps/documentation/javascript/policies).
+A opção XYZ reproduz a configuração Google Satellite do QuickMapServices instalado no QGIS: imagens visíveis são solicitadas a `https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}`, com zoom até 20. Hybrid usa `lyrs=y`. Não exige uma chave nesse endpoint. O fato de responder sem chave não é uma licença nem uma garantia de disponibilidade gratuita oficial; condições do fornecedor continuam aplicáveis. A tela mantém atribuição e link para os termos. Não há download em massa, pré-carregamento de áreas ou armazenamento offline de imagens pelo SkyLab.
 
-Ao habilitar, Google recebe a área visualizada, IP e solicitações normais do serviço. O código do SkyLab não envia arquivos de missão nem chama serviços de geocodificação. Sem ativação, não há solicitações ao Google. A camada vetorial local continua funcionando sem conexão e sem chave.
+A imagem usa Web Mercator e as linhas são transformadas do CRS do projeto para WGS84 em Rust/PROJ; pan, zoom, seleção e corte usam a mesma câmera. O serviço recebe a área visualizada e o IP, sem envio dos arquivos de missão. Sem ativar a camada, nenhuma imagem é solicitada. O funcionamento vetorial permanece offline.
 
-As linhas são convertidas do CRS do projeto para longitude/latitude WGS84 em Rust/PROJ, com amostragem intermediária dos segmentos a cada 1 km, e desenhadas pelo OverlayView na mesma projeção/pan/zoom da imagem. Isso usa **UTM/CRS**, não UTC (hora). A camada de satélite pode ter deslocamentos ou imagens antigas e não substitui o levantamento. A imagem real não foi validada nesta entrega porque uma chave habilitada da empresa não foi fornecida.
+A opção Google Maps Platform preserva o renderizador oficial, chave Maps JavaScript API e suas configurações. Custos e condições dessa API são próprios da conta configurada. Detalhes e fontes em GOOGLE-MAPS-CUSTOS.md.
 
 ## Pré-requisitos e verificação
 

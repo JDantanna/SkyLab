@@ -5,6 +5,7 @@ pub mod desktop;
 pub mod editing;
 pub mod installation;
 pub mod projection;
+pub mod recovery;
 pub mod self_update;
 pub mod updates;
 pub type Result<T> = std::result::Result<T, String>;

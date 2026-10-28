@@ -1,5 +1,16 @@
 # Histórico de versões
 
+## 0.1 — início, atalhos e recuperação (revisão interna 4)
+
+- Tela de entrada sem projeto ou aba automática; criar, abrir e arrastar arquivo.
+- Transição aguarda imagens, fontes e quadros pintados antes de remover a cobertura nativa.
+- Créditos do Delphi, colaboradores e Rafael Dantas no Sobre.
+- Seleção com seta, corte com tesoura e manutenção dos trechos cortados selecionados.
+- Atalhos configuráveis em Ajuda/F1, com persistência local e verificação de conflitos.
+- Recuperação local a cada 90 segundos, preservada após falha e limpa no encerramento normal.
+- Conexão Google Satellite/Hybrid XYZ conforme configuração do QuickMapServices/QGIS, sem chave de API.
+
+
 ## 0.1 — edição e atualização interna (revisão interna 3)
 
 - Botão de edição: seleção por clique/retângulo, corte por traço e exclusão da seleção.

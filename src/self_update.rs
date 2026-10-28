@@ -50,6 +50,9 @@ pub fn validate_session(value: &Value) -> Result<()> {
         .get("documents")
         .and_then(Value::as_array)
         .ok_or("Sessão de atualização inválida.")?;
+    if docs.is_empty() && value["active"].is_null() {
+        return Ok(());
+    }
     if docs.is_empty() || docs.len() > 3 {
         return Err("Sessão precisa ter de 1 a 3 projetos.".into());
     }

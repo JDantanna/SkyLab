@@ -17,3 +17,8 @@ fn invalid_update_sessions_are_refused() {
         assert!(self_update::validate_session(&session).is_err());
     }
 }
+
+#[test]
+fn home_screen_can_restart_after_update_without_creating_a_project() {
+    self_update::validate_session(&json!({"active":null,"documents":[]})).unwrap();
+}
