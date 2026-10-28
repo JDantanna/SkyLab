@@ -34,14 +34,14 @@ fn install_upgrade_uninstall_preserves_user_files_and_shortcut_targets() {
     )
     .unwrap();
     assert_eq!(
-        metadata["InstallLocation"],
-        o.root.to_string_lossy().as_ref()
+        fs::canonicalize(metadata["InstallLocation"].as_str().unwrap()).unwrap(),
+        fs::canonicalize(&o.root).unwrap()
     );
     let shortcut=skylab_rust::desktop::hidden(std::process::Command::new("powershell.exe").args(["-NoProfile","-NonInteractive","-Command","$s=New-Object -ComObject WScript.Shell; ($s.CreateShortcut((Join-Path $env:SKYLAB_TEST_ROOT 'test-shortcuts/SkyLab.lnk'))).TargetPath"]).env("SKYLAB_TEST_ROOT",&o.root)).output().unwrap();
     assert!(shortcut.status.success());
     assert_eq!(
-        String::from_utf8_lossy(&shortcut.stdout).trim(),
-        o.root.join(APP).to_string_lossy()
+        fs::canonicalize(String::from_utf8_lossy(&shortcut.stdout).trim()).unwrap(),
+        fs::canonicalize(o.root.join(APP)).unwrap()
     );
     fs::write(o.root.join("personal-project.json"), "keep").unwrap();
     installation::install(&o, b"MZ-test-app-v2", setup).unwrap();
