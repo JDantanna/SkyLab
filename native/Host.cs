@@ -13,6 +13,10 @@ using Microsoft.Web.WebView2.WinForms;
 internal static class Program {
     [DllImport("user32.dll")] private static extern bool SetProcessDPIAware();
     [STAThread] private static int Main(string[] args) {
+        if(args.Length==1&&args[0]=="--read-kmz") {
+            try {var bytes=ReadKmz();using(var output=Console.OpenStandardOutput())output.Write(bytes,0,bytes.Length);return 0;}
+            catch(Exception e){var bytes=System.Text.Encoding.UTF8.GetBytes(e.GetBaseException().Message);using(var output=Console.OpenStandardError())output.Write(bytes,0,bytes.Length);return 1;}
+        }
         if(args.Length==4&&(args[0]=="--download-update"||args[0]=="--unpack-update")) {
             try{using(var output=Console.OpenStandardOutput())DownloadPackage(args[1],args[2],args[3],args[0]=="--unpack-update",output).GetAwaiter().GetResult();return 0;}
             catch(Exception e){var bytes=System.Text.Encoding.UTF8.GetBytes(e.GetBaseException().Message);using(var output=Console.OpenStandardError())output.Write(bytes,0,bytes.Length);return 1;}
@@ -36,6 +40,19 @@ internal static class Program {
         } catch (Exception e) {
             MessageBox.Show("Não foi possível abrir a janela do SkyLab.\n\n" + e.Message, "SkyLab", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
+        }
+    }
+    private static byte[] ReadKmz() {
+        string encoded;using(var input=new StreamReader(Console.OpenStandardInput(),System.Text.Encoding.ASCII)){var chars=new char[11184813];int count=0,read;while(count<chars.Length&&(read=input.Read(chars,count,chars.Length-count))>0)count+=read;if(count>11184812)throw new Exception("KMZ excede 8 MB.");encoded=new String(chars,0,count);}
+        var bytes=Convert.FromBase64String(encoded);if(bytes.Length>8388608)throw new Exception("KMZ excede 8 MB.");
+        using(var memory=new MemoryStream(bytes))using(var zip=new System.IO.Compression.ZipArchive(memory,System.IO.Compression.ZipArchiveMode.Read)) {
+            if(zip.Entries.Count>1024)throw new Exception("KMZ contém entradas demais.");
+            System.IO.Compression.ZipArchiveEntry chosen=null;int kmlCount=0;
+            foreach(var entry in zip.Entries)if(entry.FullName.EndsWith(".kml",StringComparison.OrdinalIgnoreCase)){kmlCount++;if(chosen==null||entry.FullName.Equals("doc.kml",StringComparison.OrdinalIgnoreCase))chosen=entry;}
+            if(chosen==null)throw new Exception("KMZ sem arquivo KML.");
+            if(kmlCount>1&&!chosen.FullName.Equals("doc.kml",StringComparison.OrdinalIgnoreCase))throw new Exception("KMZ contém vários KML sem doc.kml principal.");
+            if(chosen.Length>8388608)throw new Exception("KML interno excede 8 MB.");
+            using(var input=chosen.Open())using(var output=new MemoryStream()){var buffer=new byte[81920];int read;while((read=input.Read(buffer,0,buffer.Length))>0){if(output.Length+read>8388608)throw new Exception("KML interno excede 8 MB.");output.Write(buffer,0,read);}var content=output.ToArray();new System.Text.UTF8Encoding(false,true).GetString(content);return content;}
         }
     }
     private static void Report(Stream output,long done,long total) {

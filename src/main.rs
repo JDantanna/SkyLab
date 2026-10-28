@@ -21,6 +21,9 @@ struct Request {
     geographic: bool,
 }
 fn process(r: Request) -> Result<Value> {
+    if r.op == "read-kmz" {
+        return Ok(json!({"text":kmz::read(&r.text)?}));
+    }
     if r.op == "inspect-crs" {
         if let Ok(p) = serde_json::from_str::<Project>(&r.text) {
             p.crs.validate()?;
@@ -111,7 +114,7 @@ fn process(r: Request) -> Result<Value> {
             }
             p.crs = target;
             if p.crs.authority.is_some() {
-                p.version = 2;
+                p.version = p.version.max(2);
             }
         }
         "geographic" => {
@@ -152,11 +155,29 @@ fn process(r: Request) -> Result<Value> {
         }
         "validate" => return Ok(json!(p)),
         "generate" => {
-            let lines = generate(&p, &r.settings.ok_or("Parâmetros ausentes")?)?;
+            let mut lines = generate(&p, &r.settings.ok_or("Parâmetros ausentes")?)?;
+            let id = layers::next_id(&p)?;
+            for line in &mut lines {
+                line.layer = Some(id);
+            }
+            p.layers.push(layers::Layer {
+                id,
+                name: "Generated lines".into(),
+                source: "Generated".into(),
+                warnings: vec![],
+            });
+            p.version = 3;
             if r.append {
                 p.lines.extend(lines)
             } else {
-                p.lines = lines
+                p.lines = lines;
+                let used: std::collections::HashSet<_> = p
+                    .lines
+                    .iter()
+                    .filter_map(|l| l.layer)
+                    .chain(p.polygons.iter().filter_map(|g| g.layer))
+                    .collect();
+                p.layers.retain(|l| used.contains(&l.id));
             }
         }
         "trim" => {
@@ -182,6 +203,7 @@ fn process(r: Request) -> Result<Value> {
                 let count = pieces.len();
                 for (j, points) in pieces.into_iter().enumerate() {
                     out.push(Line {
+                        layer: l.layer,
                         name: if count > 1 {
                             format!("{}_{}", l.name, j + 1)
                         } else {
@@ -192,6 +214,13 @@ fn process(r: Request) -> Result<Value> {
                 }
             }
             p.lines = out
+        }
+        "layer-subset" => {
+            return Ok(json!(layers::subset(
+                &p,
+                u32::try_from(r.index.ok_or("Selecione uma camada")?)
+                    .map_err(|_| "Camada inválida")?
+            )?));
         }
         "export-mis" => return Ok(json!({"text":export_mis(&p)?})),
         "export-kml" => return Ok(json!({"text":export_kml(&p)?})),
@@ -480,6 +509,16 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                     .replace("__VERSION__", updates::display_version())
                     .into(),
             ),
+            ("GET", "/layer-model.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/layer-model.js").into(),
+            ),
+            ("GET", "/layers.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/layers.js").into(),
+            ),
             ("GET", "/home.js") => (
                 200,
                 "text/javascript; charset=utf-8",
@@ -580,10 +619,10 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 let mut buf = String::new();
                 let read = req
                     .as_reader()
-                    .take(10 * 1024 * 1024 + 1)
+                    .take(16 * 1024 * 1024 + 1)
                     .read_to_string(&mut buf);
-                let result = if read.is_err() || buf.len() > 10 * 1024 * 1024 {
-                    Err("Requisição inválida ou maior que 10 MB.".into())
+                let result = if read.is_err() || buf.len() > 16 * 1024 * 1024 {
+                    Err("Requisição inválida ou maior que 16 MB.".into())
                 } else {
                     serde_json::from_str::<Request>(&buf)
                         .map_err(|e| e.to_string())

@@ -4,6 +4,8 @@ use std::fmt::Write as _;
 pub mod desktop;
 pub mod editing;
 pub mod installation;
+pub mod kmz;
+pub mod layers;
 pub mod projection;
 pub mod recovery;
 pub mod self_update;
@@ -20,16 +22,22 @@ pub struct Crs {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Polygon {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layer: Option<u32>,
     pub outer: Vec<Point>,
     pub holes: Vec<Vec<Point>>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Line {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layer: Option<u32>,
     pub name: String,
     pub points: Vec<Point>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Project {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub layers: Vec<layers::Layer>,
     pub version: u8,
     pub crs: Crs,
     pub polygons: Vec<Polygon>,
@@ -243,6 +251,7 @@ fn validate_ring(r: &[Point]) -> Result<()> {
 impl Project {
     pub fn empty(crs: Crs) -> Self {
         Self {
+            layers: vec![],
             version: if crs.authority.is_some() { 2 } else { 1 },
             crs,
             polygons: vec![],
@@ -254,10 +263,12 @@ impl Project {
         self.validate_with_lines(&self.lines)
     }
     fn validate_with_lines(&self, lines: &[Line]) -> Result<()> {
-        if ![1, 2].contains(&self.version) || (self.crs.authority.is_some() && self.version != 2) {
+        if ![1, 2, 3].contains(&self.version) || (self.crs.authority.is_some() && self.version < 2)
+        {
             return Err("Versão de projeto não suportada.".into());
         }
         self.crs.validate()?;
+        layers::validate(self)?;
         let vertices: usize = self
             .polygons
             .iter()
@@ -285,7 +296,7 @@ impl Project {
         }
         let mut names = std::collections::HashSet::new();
         for l in lines {
-            if !valid_name(&l.name) || !names.insert(&l.name) {
+            if !valid_name(&l.name) || !names.insert((l.layer, &l.name)) {
                 return Err(format!(
                     "Nome inválido ou repetido: {}. Use ASCII, sem espaços, até 64 caracteres.",
                     l.name
@@ -333,6 +344,7 @@ pub fn import_mis(text: &str, crs: Crs) -> Result<Project> {
                 p.lines.push(l)
             }
             current = Some(Line {
+                layer: None,
                 name: s.into(),
                 points: vec![],
             });
@@ -444,6 +456,7 @@ pub fn import_kml(text: &str, crs: Crs) -> Result<Project> {
             }
             used_names.insert(nm.clone());
             p.lines.push(Line {
+                layer: None,
                 name: nm,
                 points: coords(*n, &p.crs)?,
             });
@@ -454,6 +467,7 @@ pub fn import_kml(text: &str, crs: Crs) -> Result<Project> {
                 .find(|n| n.has_tag_name("outerBoundaryIs"))
                 .ok_or("Polígono sem contorno externo")?;
             let mut g = Polygon {
+                layer: None,
                 outer: coords(outer, &p.crs)?,
                 holes: vec![],
             };
@@ -464,7 +478,7 @@ pub fn import_kml(text: &str, crs: Crs) -> Result<Project> {
         }
     }
     if p.lines.is_empty() && p.polygons.is_empty() {
-        return Err("KML sem Polygon ou LineString. KMZ deve ser descompactado antes.".into());
+        return Err("KML sem Polygon ou LineString.".into());
     }
     if p.polygons.is_empty() {
         p.warnings.push("Este KML contém linhas, sem bloco poligonal. Importe um polígono para gerar ou recortar a malha.".into())
@@ -591,6 +605,7 @@ pub fn generate(p: &Project, s: &Settings) -> Result<Vec<Line>> {
         }
         let point = |u: f64| [along[0] * u + across[0] * v, along[1] * u + across[1] * v];
         let l = Line {
+            layer: None,
             name: String::new(),
             points: vec![point(umin - 1.), point(umax + 1.)],
         };
@@ -604,6 +619,7 @@ pub fn generate(p: &Project, s: &Settings) -> Result<Vec<Line>> {
                 )
                 .ok_or("Numeração excedida")?;
             let mut line = Line {
+                layer: None,
                 name: format!("{}{number:06}", s.prefix),
                 points,
             };
@@ -649,6 +665,7 @@ pub fn trim_line(l: &Line, start: f64, end: f64) -> Result<Line> {
         }
     }
     Ok(Line {
+        layer: l.layer,
         name: l.name.clone(),
         points: pts,
     })
@@ -657,6 +674,10 @@ pub fn export_mis(p: &Project) -> Result<String> {
     p.validate()?;
     if p.lines.is_empty() {
         return Err("Sem linhas para exportar.".into());
+    }
+    let mut names = std::collections::HashSet::new();
+    if p.lines.iter().any(|line| !names.insert(&line.name)) {
+        return Err("Há nomes repetidos entre camadas. Exporte as camadas separadamente ou renumere as linhas.".into());
     }
     let mut s = String::new();
     for l in &p.lines {

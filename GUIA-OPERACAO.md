@@ -2,7 +2,7 @@
 
 ## Tela inicial e atalhos
 
-O programa abre sem projetos e sem abas. Use Novo projeto (Ctrl+N), Abrir (Ctrl+O) ou arraste um arquivo para a tela inicial. Fechar a última aba retorna a essa tela.
+O programa abre sem projetos e sem abas. Use Novo projeto (Ctrl+N), Abrir (Ctrl+O) ou arraste um arquivo para a tela inicial. Fechar a última aba retorna a essa tela. O próximo projeto volta ao número 1; números adicionais identificam as abas abertas, sem seguir o total histórico de projetos criados.
 
 Ajuda → Atalhos de teclado, ou F1, permite mudar os atalhos. A ordem e os valores iniciais são: Novo projeto Ctrl+N; Abrir/importar Ctrl+O; Salvar Ctrl+S; Excluir Delete; Selecionar V; Cortar Q. Clique no campo e pressione a combinação; conflitos e combinações reservadas são recusados. Preferências ficam no computador. Ctrl+Z/Ctrl+Y continuam disponíveis. Digitar em campos não aciona atalhos simples como V, Q ou Delete.
 
@@ -27,6 +27,20 @@ Ao abrir cada arquivo, o diálogo de coordenadas sempre aparece antes de alterar
 É possível manter o sistema atual ou adotar o escolhido. Ao adicionar dados em outro sistema, os dados existentes são reprojetados antes da união; nunca se juntam coordenadas de sistemas diferentes apenas trocando o rótulo. Cancelar não altera o projeto. Falhas de transformação também preservam o projeto anterior.
 
 Clique na logo SkyLab para abrir o menu com Novo projeto, Salvar projeto, Exportar, Ajuda e Sobre. A faixa abaixo do cabeçalho contém até três abas independentes. O ícone de duas setas consulta atualizações. Abrir exemplo fica no fim de Ajuda. O botão de arquivo passa de Selecionar arquivo a Adicionar arquivo quando um projeto está aberto; após cada importação, o mapa enquadra a geometria recém-importada.
+
+## Camadas por arquivo
+
+A seção Camadas organiza cada arquivo importado separadamente. Expanda o grupo do projeto e o nome do arquivo para ver polígonos e linhas. Clique em uma linha para selecioná-la no mapa e no painel de revisão. Clique em um polígono para enquadrá-lo. Grupos grandes carregam os itens sob demanda; Mostrar mais revela os seguintes sem construir milhares de elementos inicialmente.
+
+MIS e MISSION são tratados como o mesmo formato textual de linhas. KML e KMZ podem conter polígonos e linhas. KMZ utiliza doc.kml ou um único KML do arquivo compactado; múltiplos KML sem principal são recusados. Não são extraídos arquivos para pastas e NetworkLinks não são baixados. Importações continuam pedindo a confirmação do CRS, individualmente, inclusive ao escolher vários arquivos.
+
+Botão direito no arquivo/camada oferece Enquadrar e Exportar MIS, KML ou JSON somente daquele grupo. MIS fica indisponível para camadas sem linhas. Nomes iguais em arquivos diferentes não são alterados; para um MIS combinado, renumere as linhas ou exporte cada camada separadamente. Cortes, recortes, divisão e renomeação conservam a associação ao arquivo. Linhas geradas aparecem em um grupo próprio.
+
+Salvar projeto grava a estrutura inteira em JSON de formato 3. O número 3 é a versão do arquivo, não a versão do aplicativo, que continua 0.1. Projetos anteriores dos formatos 1 e 2 são legíveis, mas sua origem já mesclada não pode ser reconstruída: aparecem como um grupo existente. Revisões anteriores do programa recusam JSON formato 3, evitando descartar camadas silenciosamente.
+
+## Arrasto nos rótulos
+
+Passe sobre Spacing, Grid azimuth, Initial offset, Minimum length ou os rótulos de corte/divisão por distância. O cursor horizontal indica que o nome pode ser arrastado. Segure o botão esquerdo e mova para a direita para aumentar ou para a esquerda para diminuir. A prévia é atualizada durante o movimento, sem cobrir os controles. Shift refina o ajuste; Ctrl acelera; Escape durante o arrasto restaura o valor inicial. Digitar diretamente no campo continua disponível. Primeiro número e incremento permanecem sem esse arrasto.
 
 ## Seleção e edição
 
@@ -66,7 +80,9 @@ Projetos que armazenam uma autoridade de CRS usam formato JSON de projeto 2, par
 
 ## Satélite opcional
 
-O botão Satellite liga/desliga a imagem e permite escolher Google Satellite, Google Hybrid ou Google Maps via XYZ, ou a conexão Google Maps Platform com chave.
+O botão Satellite abre as opções da imagem, inclusive quando ela já está ativa, e permite escolher Google Satellite, Google Hybrid ou Google Maps via XYZ, ou a conexão Google Maps Platform com chave.
+
+Com XYZ ativo, escolher outro tipo troca a imagem imediatamente e mantém o enquadramento. Desligar imagem é uma opção separada.
 
 A opção XYZ reproduz a configuração Google Satellite do QuickMapServices instalado no QGIS: imagens visíveis são solicitadas a `https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}`, com zoom até 20. Hybrid usa `lyrs=y`. Não exige uma chave nesse endpoint. O fato de responder sem chave não é uma licença nem uma garantia de disponibilidade gratuita oficial; condições do fornecedor continuam aplicáveis. A tela mantém atribuição e link para os termos. Não há download em massa, pré-carregamento de áreas ou armazenamento offline de imagens pelo SkyLab.
 

@@ -1,6 +1,7 @@
 use skylab_rust::{Crs, Line, Project, editing, length};
 fn line(name: &str, points: &[[f64; 2]]) -> Line {
     Line {
+        layer: None,
         name: name.into(),
         points: points
             .iter()
@@ -10,6 +11,7 @@ fn line(name: &str, points: &[[f64; 2]]) -> Line {
 }
 fn project(lines: Vec<Line>) -> Project {
     Project {
+        layers: vec![],
         version: 1,
         crs: Crs {
             zone: 23,

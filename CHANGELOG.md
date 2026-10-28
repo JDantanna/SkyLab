@@ -1,5 +1,16 @@
 # Histórico de versões
 
+## 0.1 — camadas e controles de edição (revisão interna 5)
+
+- Numeração de projetos sem acumular os já fechados; ícones distintos de atualização e salvamento automático.
+- Gerenciamento de camadas por arquivo MIS/MISSION, KML ou KMZ, com árvore de polígonos e linhas.
+- Exportação individual por camada em MIS/KML/JSON, preservando geometria e identificação de origem após cortes e divisões.
+- KMZ lido sem extrair arquivos. JSON de projeto formato 3; formatos anteriores permanecem legíveis.
+- Troca direta do mapa de fundo com enquadramento preservado e opção separada para desligar a imagem.
+- Arrasto horizontal nos rótulos numéricos, com prévia dinâmica, sem painel flutuante.
+- Hover restrito à imagem do ícone e espaçamentos padronizados entre título, ferramentas e indicadores.
+
+
 ## 0.1 — início, atalhos e recuperação (revisão interna 4)
 
 - Tela de entrada sem projeto ou aba automática; criar, abrir e arrastar arquivo.

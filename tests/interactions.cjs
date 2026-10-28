@@ -34,9 +34,12 @@ test('adding a file fits the added geometry, retains existing lines and undo res
  h.run('project.crs={zone:23,south:true};project.version=1;project.polygons=[];project.warnings=[];');
  const source=fs.readFileSync(require.resolve('../web/workspace.js'),'utf8');
  vm.runInContext(source.slice(source.indexOf('function fitGeometry('),source.indexOf('async function fitSatelliteGeometry(')),h.context);
- const loader=source.split('\n').find(line=>line.startsWith('loadFile=async function'));
+ const layerSource=fs.readFileSync(require.resolve('../web/layers.js'),'utf8');
+ h.context.SkyLabLayers=require('../web/layer-model.js');h.context.readLayerFile=file=>file.text();h.context.renderLayers=()=>{};
+ const loader=layerSource.slice(layerSource.indexOf('loadFile=async function'),layerSource.indexOf("$('file').onchange="));
  vm.runInContext(loader,h.context);
  await h.context.loadFile({size:100,name:'synthetic.kml',text:async()=>'<kml/>'});
  assert.equal(h.run('project.lines.length'),13);assert.equal(h.run('view.x'),500050);assert.equal(h.run('view.y'),7800050);assert.equal(h.run('view.span'),195);assert.equal(h.element('source-info').textContent,'synthetic.kml');
+ assert.equal(h.run('project.layers.length'),2);assert.notEqual(h.run('project.lines[0].layer'),h.run('project.lines[12].layer'));
  h.run('undo()');assert.equal(h.run('project.lines.length'),12);assert.equal(h.run('view.x'),100);
 });

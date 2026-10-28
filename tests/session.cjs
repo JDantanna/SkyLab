@@ -1,5 +1,9 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const {Documents,LatestPreview}=require('../web/session.js');
+
+test('untitled labels reuse vacant numbers independently of persistent document IDs',()=>{
+ const docs=new Documents(3);assert.equal(docs.nextNumber(),1);const a=docs.add({untitledNumber:docs.nextNumber()});assert.equal(docs.nextNumber(),2);const b=docs.add({untitledNumber:docs.nextNumber()});assert.equal(docs.nextNumber(),3);docs.remove(a.id);assert.equal(docs.nextNumber(),1);docs.remove(b.id);const next=docs.add({untitledNumber:docs.nextNumber()});assert(next.id>1);assert.equal(next.state.untitledNumber,1);
+});
 test('three documents retain separate geometry, parameters and undo stacks; closing picks a remaining tab',()=>{
  const docs=new Documents(3);const a=docs.add({project:{lines:['A']},history:['undo A'],form:{spacing:100}}),b=docs.add({project:{lines:['B']},history:[],form:{spacing:250}}),c=docs.add({project:null});
  assert.throws(()=>docs.add({}),/document_limit/);docs.activate(a.id);docs.current().state.history.push('edit A');docs.activate(b.id);assert.deepEqual(docs.current().state.history,[]);assert.equal(docs.current().state.form.spacing,250);docs.remove(b.id);assert.equal(docs.active,c.id);docs.activate(a.id);assert.deepEqual(docs.current().state.project.lines,['A']);assert.equal(docs.current().state.history.length,2);docs.add({project:null});assert.equal(docs.items.length,3);

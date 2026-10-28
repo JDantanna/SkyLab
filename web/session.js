@@ -4,6 +4,7 @@
   constructor(limit=3){this.limit=limit;this.items=[];this.active=null;this.nextId=1;}
   add(state){if(this.items.length>=this.limit)throw Error('document_limit');const item={id:this.nextId++,state};this.items.push(item);this.active=item.id;return item;}
   current(){return this.items.find(item=>item.id===this.active);}
+  nextNumber(){const used=new Set(this.items.map((item,index)=>item.state.untitledNumber||index+1));let number=1;while(used.has(number))number++;return number;}
   activate(id){const item=this.items.find(item=>item.id===id);if(!item)throw Error('unknown_document');this.active=id;return item;}
   remove(id){const index=this.items.findIndex(item=>item.id===id);if(index<0)return;this.items.splice(index,1);if(this.active===id)this.active=this.items[Math.min(index,this.items.length-1)]?.id??null;}
  }

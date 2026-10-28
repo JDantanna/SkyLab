@@ -14,6 +14,7 @@ fn ring(coords: &[(f64, f64)]) -> Vec<Point> {
 }
 fn square() -> Polygon {
     Polygon {
+        layer: None,
         outer: ring(&[(0., 0.), (1000., 0.), (1000., 1000.), (0., 1000.), (0., 0.)]),
         holes: vec![],
     }
@@ -25,6 +26,7 @@ fn project(g: Polygon) -> Project {
 }
 fn line(points: Vec<Point>) -> Line {
     Line {
+        layer: None,
         name: "L100100".into(),
         points,
     }
@@ -156,6 +158,7 @@ fn hole_splits_without_connecting_exclusion() {
 #[test]
 fn concave_polygon_splits_into_two() {
     let g = Polygon {
+        layer: None,
         outer: ring(&[
             (0., 0.),
             (1000., 0.),
@@ -274,6 +277,7 @@ fn duplicate_and_unsafe_names_rejected() {
     for name in ["L1\nINJECT", "a b", "área", "123", "NaN", ""] {
         let mut p = Project::empty(crs());
         p.lines.push(Line {
+            layer: None,
             name: name.into(),
             points: vec![pt(0., 0.), pt(10., 10.)],
         });
