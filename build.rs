@@ -51,6 +51,7 @@ fn main() {
             "/reference:System.Drawing.dll",
             "/reference:System.Net.Http.dll",
             "/reference:System.Core.dll",
+            "/reference:System.Web.Extensions.dll",
             "/reference:System.IO.Compression.dll",
         ])
         .arg(format!(

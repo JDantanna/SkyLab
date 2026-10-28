@@ -233,9 +233,16 @@ internal sealed class ShellWindow : Form {
         } catch(Exception ex) { MessageBox.Show("Não foi possível carregar a interface.\n\n"+ex.Message,"SkyLab",MessageBoxButtons.OK,MessageBoxIcon.Error);allowClose=true;Close(); }
     }
     private void RevealPage(){if(startupShown)return;startupShown=true;loading.Visible=false;caption.BringToFront();browser.CoreWebView2.PostWebMessageAsString("startup-ready");}
+    private async void QueueFiles(string[] paths) {
+        if(paths.Length==0)return;
+        try {var json=new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(new {paths=paths,new_project=false});using(var client=new HttpClient()){var response=await client.PostAsync(new Uri(target,"/files/enqueue"),new StringContent(json,System.Text.Encoding.UTF8,"application/json"));response.EnsureSuccessStatusCode();}browser.CoreWebView2.PostWebMessageAsString("files-queued");}
+        catch {browser.CoreWebView2.PostWebMessageAsString("files-failed");}
+    }
     private void Message(object sender,CoreWebView2WebMessageReceivedEventArgs e) {
         Uri source;if(!Uri.TryCreate(e.Source,UriKind.Absolute,out source)||source.GetLeftPart(UriPartial.Authority)!=target.GetLeftPart(UriPartial.Authority))return;
         string command;try{command=e.TryGetWebMessageAsString();}catch{return;}
+        if(command=="open-files"){using(var dialog=new OpenFileDialog()){dialog.Title="SkyLab — Open file";dialog.Filter="SkyLab files|*.kml;*.kmz;*.mis;*.mission;*.json";dialog.Multiselect=true;if(dialog.ShowDialog(this)==DialogResult.OK)QueueFiles(dialog.FileNames);}return;}
+        if(command=="dropped-files"){var paths=new System.Collections.Generic.List<string>();foreach(var item in e.AdditionalObjects){var file=item as CoreWebView2File;if(file!=null)paths.Add(file.Path);}QueueFiles(paths.ToArray());return;}
         if(command=="startup-painted"){pagePainted=true;if(ready)RevealPage();return;}
         if(command.StartsWith("caption:")){var parts=command.Split(':');double height,scale;if(parts.Length==3&&Double.TryParse(parts[1],System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out height)&&Double.TryParse(parts[2],System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out scale)&&height>=40&&height<=100&&scale>=0.5&&scale<=4)LayoutCaption(height,scale);return;}
         RunCommand(command);

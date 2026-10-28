@@ -1,10 +1,20 @@
-# SkyLab — 0.1
+# SkyLab — 0.2
 
 Primeira versão utilizável, local, do fluxo de missões do SkyLab para helicópteros. O cálculo e a validação são feitos em Rust; a interface usa uma janela Windows própria e opera localmente. Não utiliza nem executa o programa antigo.
 
+## Layout e arquivos
+
+Os painéis de camadas, malha, revisão, seleção, corte por distância e ações em lote podem ser redimensionados, minimizados, ocultados e movidos entre as laterais, a parte inferior e posições flutuantes dentro da janela SkyLab. Arraste o título ou use o seletor de encaixe; Ajuda > Painéis permite reabrir painéis e restaurar o layout. O layout é lembrado neste computador.
+
+Durante a edição, segure Espaço para mover o mapa e solte para voltar à ferramenta anterior. A mão também está disponível na barra. Botão direito > Exportar seleção · MIS exporta só as linhas selecionadas, preservando todos os vértices.
+
+A tela inicial mostra até 12 arquivos recentes e reabre seu conteúdo atual no disco; apenas os caminhos são guardados na lista. O instalador registra `.mis` e encaminha os arquivos para a instância aberta. Se o Windows já tiver outro aplicativo explicitamente escolhido, selecione SkyLab uma vez em Abrir com > Sempre. O programa respeita essa escolha protegida do Windows.
+
+Esta é uma versão de testes; o rodapé de todas as telas informa o contato Rafael Dantas, rda@skytem.com.
+
 ## Camadas e edição
 
-MIS/MISSION, KML e KMZ ficam em grupos separados no painel de camadas. Expanda um arquivo para ver seus polígonos e linhas; botão direito exporta somente esse grupo. Salvar projeto mantém as camadas em JSON formato 3, com leitura dos formatos anteriores. A versão do programa continua 0.1.
+MIS/MISSION, KML e KMZ ficam em grupos separados no painel de camadas. Expanda um arquivo para ver seus polígonos e linhas; botão direito exporta somente esse grupo. Salvar projeto mantém as camadas em JSON formato 3, com leitura dos formatos anteriores. A versão do programa é 0.2.
 
 Arraste os rótulos dos parâmetros para ajustar valores com prévia em tempo real, sem painel flutuante. Clique em Satellite para trocar a conexão diretamente, mantendo o enquadramento. Consulte GUIA-OPERACAO.md.
 
@@ -18,9 +28,9 @@ A opção Google Satellite XYZ utiliza a mesma conexão do QuickMapServices/QGIS
 
 ## Instalar e abrir
 
-Obtenha **SkyTEM-SkyLab-Setup-0.1-r6.exe** na [Release 0.1](https://github.com/JDantanna/SkyLab/releases/tag/v0.1-r6) e execute o instalador. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
+Obtenha **SkyTEM-SkyLab-Setup-0.2-r1.exe** na [Release 0.2](https://github.com/JDantanna/SkyLab/releases/tag/v0.2-r1) e execute o instalador. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
 
-Abra **SkyLab** pelo menu Iniciar ou pelo atalho. A janela Windows usa WebView2 e controles integrados ao cabeçalho azul, sem a moldura do navegador. A versão exibida é **0.1** (0.1.0 no pacote Rust). Antes de qualquer avanço de versão, será solicitada uma decisão explícita do usuário.
+Abra **SkyLab** pelo menu Iniciar ou pelo atalho. A janela Windows usa WebView2 e controles integrados ao cabeçalho azul, sem a moldura do navegador. A versão exibida é **0.2** (0.2.0 no pacote Rust). Antes de qualquer avanço de versão, será solicitada uma decisão explícita do usuário.
 
 O aplicativo requer Windows 64 bits (x64), .NET Framework 4.6.2 ou posterior Microsoft Edge WebView2 Runtime e Microsoft Visual C++ 2015–2022 x64 Runtime. O runtime já está disponível neste computador; em outras máquinas, a TI deve instalá-lo se necessário. Consulte JANELA-WINDOWS.md.
 

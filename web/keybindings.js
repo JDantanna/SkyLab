@@ -1,7 +1,7 @@
 (function(root){
  'use strict';
  const defaults={new:'Ctrl+N',open:'Ctrl+O',save:'Ctrl+S',delete:'Delete',select:'V',cut:'Q'};
- const reserved=new Set(['F1','Ctrl+Z','Ctrl+Y','Ctrl+Shift+Z','Alt+F4','Escape','Tab']);
+ const reserved=new Set(['F1','Ctrl+Z','Ctrl+Y','Ctrl+Shift+Z','Alt+F4','Escape','Tab','Space']);
  function chord(event){if(['Control','Shift','Alt','Meta','Dead','Unidentified'].includes(event.key))return null;let key=event.key===' '?'Space':event.key.length===1?event.key.toUpperCase():event.key;return [(event.ctrlKey||event.metaKey)?'Ctrl':null,event.altKey?'Alt':null,event.shiftKey?'Shift':null,key].filter(Boolean).join('+');}
  function valid(key){return typeof key==='string'&&key.length<=40&&!reserved.has(key)&&/^(?:(?:Ctrl|Alt|Shift)\+)*(?:[^\s]|F(?:[2-9]|1[0-2])|Delete|Backspace|Insert|Home|End|PageUp|PageDown|Arrow(?:Up|Down|Left|Right)|Space|Enter)$/.test(key);}
  function assign(bindings,action,key){if(!(action in defaults)||!valid(key))throw Error('reserved');if(Object.entries(bindings).some(([name,value])=>name!==action&&value===key))throw Error('duplicate');return {...bindings,[action]:key};}

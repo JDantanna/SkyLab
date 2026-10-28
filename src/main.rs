@@ -14,6 +14,7 @@ struct Request {
     #[serde(default)]
     append: bool,
     index: Option<usize>,
+    indices: Option<Vec<usize>>,
     start: Option<f64>,
     end: Option<f64>,
     stroke: Option<Vec<Point>>,
@@ -153,6 +154,23 @@ fn process(r: Request) -> Result<Value> {
             }
             return Ok(json!(p));
         }
+        "export-selection" => {
+            let indices = r.indices.ok_or("Selection is missing")?;
+            if indices.is_empty() {
+                return Err("Select at least one line".into());
+            }
+            let mut seen = std::collections::HashSet::new();
+            let mut lines = Vec::with_capacity(indices.len().min(p.lines.len()));
+            for index in indices {
+                if !seen.insert(index) {
+                    continue;
+                }
+                lines.push(p.lines.get(index).ok_or("Invalid selected line")?.clone());
+            }
+            p.lines = lines;
+            p.polygons.clear();
+            return Ok(json!({"text":export_mis(&p)?}));
+        }
         "validate" => return Ok(json!(p)),
         "generate" => {
             let mut lines = generate(&p, &r.settings.ok_or("Parâmetros ausentes")?)?;
@@ -252,6 +270,27 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         }
         return Ok(());
     }
+    if args.iter().any(|s| s == "--uninstall") {
+        return setup::run(None);
+    }
+    let open_paths: Vec<std::path::PathBuf> =
+        if let Some(i) = args.iter().position(|s| s == "--open") {
+            args[i + 1..]
+                .iter()
+                .take_while(|s| !s.starts_with("--"))
+                .map(std::path::PathBuf::from)
+                .collect()
+        } else {
+            args.get(1)
+                .filter(|s| {
+                    !s.starts_with('-')
+                        && std::path::Path::new(s).is_absolute()
+                        && std::path::Path::new(s).is_file()
+                })
+                .map(std::path::PathBuf::from)
+                .into_iter()
+                .collect()
+        };
     let updater = self_update::Manager::new();
     let mut restore_path = args
         .iter()
@@ -283,6 +322,24 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 if reply.contains("skytem-skylab-local-planner")
                     && reply.contains("native-window-v3")
                 {
+                    if !open_paths.is_empty() {
+                        let body = json!({"paths":open_paths,"new_project":true}).to_string();
+                        let mut forward = std::net::TcpStream::connect(("127.0.0.1", port))?;
+                        forward.set_read_timeout(Some(std::time::Duration::from_secs(5)))?;
+                        write!(
+                            forward,
+                            "POST /files/enqueue HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                            body.len()
+                        )?;
+                        let mut reply = String::new();
+                        forward.take(4096).read_to_string(&mut reply)?;
+                        if !reply.contains("200 OK") {
+                            return Err(
+                                "Close the previous SkyLab revision before opening this file."
+                                    .into(),
+                            );
+                        }
+                    }
                     if !args.iter().any(|s| s == "--no-open") {
                         let mut activate = std::net::TcpStream::connect(("127.0.0.1", port))?;
                         write!(
@@ -309,6 +366,16 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     } else {
         recovery::Recovery::default()
     };
+    let mut files = if args.iter().any(|s| s == "--no-open")
+        && std::env::var_os("SKYLAB_FILES_DIR").is_none()
+    {
+        files::Files::at(
+            std::env::temp_dir().join(format!("SkyLab-Test-Files-{}", std::process::id())),
+        )
+    } else {
+        files::Files::default()
+    };
+    files.enqueue(&open_paths, true)?;
     let actual = listener.local_addr()?.port();
     let origin = format!("http://127.0.0.1:{actual}");
     let server = tiny_http::Server::from_listener(listener, None).map_err(|e| e.to_string())?;
@@ -355,10 +422,75 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             continue;
         }
         let mut shutdown = false;
+        let request_url = req.url().to_owned();
         let (status, mime, body): (u16, &str, Cow<'static, str>) = match (
             req.method().as_str(),
-            req.url(),
+            request_url.as_str(),
         ) {
+            ("GET", "/files/recent") => (
+                200,
+                "application/json",
+                json!({"ok":true,"data":files.recent()}).to_string().into(),
+            ),
+            ("GET", "/files/pending") => (
+                200,
+                "application/json",
+                json!({"ok":true,"data":files.pending()}).to_string().into(),
+            ),
+            ("POST", route)
+                if [
+                    "/files/enqueue",
+                    "/files/read",
+                    "/files/remember",
+                    "/files/forget",
+                    "/files/ack",
+                ]
+                .contains(&route) =>
+            {
+                let mut body = String::new();
+                let read = req.as_reader().take(32769).read_to_string(&mut body);
+                let result = (|| -> Result<Value> {
+                    if read.is_err() || body.len() > 32768 {
+                        return Err("Invalid file request".into());
+                    }
+                    let input: Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+                    if route == "/files/enqueue" {
+                        let paths: Vec<std::path::PathBuf> =
+                            serde_json::from_value(input["paths"].clone())
+                                .map_err(|e| e.to_string())?;
+                        files.enqueue(&paths, input["new_project"].as_bool().unwrap_or(false))?;
+                        return Ok(json!(true));
+                    }
+                    let id = input["id"].as_u64().ok_or("File ID is missing")?;
+                    match route {
+                        "/files/read" => files.read(id),
+                        "/files/remember" => {
+                            files.remember(id)?;
+                            Ok(json!(true))
+                        }
+                        "/files/forget" => {
+                            files.forget(id)?;
+                            Ok(json!(true))
+                        }
+                        _ => {
+                            files.acknowledge(id);
+                            Ok(json!(true))
+                        }
+                    }
+                })();
+                match result {
+                    Ok(data) => (
+                        200,
+                        "application/json",
+                        json!({"ok":true,"data":data}).to_string().into(),
+                    ),
+                    Err(error) => (
+                        400,
+                        "application/json",
+                        json!({"ok":false,"error":error}).to_string().into(),
+                    ),
+                }
+            }
             ("POST", "/activate") => {
                 let child = desktop::open(&origin, false);
                 if window.is_none() {
@@ -370,6 +502,31 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 200,
                 "image/svg+xml",
                 include_str!("../assets/skytem-normal.svg").into(),
+            ),
+            ("GET", "/brand-light.svg") => (
+                200,
+                "image/svg+xml",
+                include_str!("../assets/skylab-light.svg").into(),
+            ),
+            ("GET", "/brand-dark.svg") => (
+                200,
+                "image/svg+xml",
+                include_str!("../assets/skylab-dark.svg").into(),
+            ),
+            ("GET", "/panels.css") => (
+                200,
+                "text/css; charset=utf-8",
+                include_str!("../web/panels.css").into(),
+            ),
+            ("GET", "/panels.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/panels.js").into(),
+            ),
+            ("GET", "/files.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/files.js").into(),
             ),
             ("GET", "/brand.svg") => (
                 200,

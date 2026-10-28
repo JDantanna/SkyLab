@@ -1,5 +1,15 @@
 # Histórico de versões
 
+## 0.2 — painéis e integração com arquivos (revisão interna 1)
+
+- Painéis móveis e redimensionáveis com encaixe lateral/inferior, posições flutuantes internas, minimizar, ocultar e restaurar layout persistente.
+- Ferramenta mão e navegação temporária com Espaço, devolvendo seleção/corte ao soltar.
+- Tela inicial com logo transparente e até 12 arquivos recentes, reabertos diretamente do disco.
+- Exportação da seleção em MIS preserva todos os vértices e valida nomes.
+- Associação MIS por usuário e encaminhamento para a instância aberta; migração do desinstalador ao atualizar da 0.1, com remoção dos registros próprios.
+- Logo inversa no About, contribuição duplicada removida e rodapé de testes em todas as telas.
+- JSON de projeto continua no formato 3, mantendo compatibilidade com os formatos anteriores.
+
 ## 0.1 — liberação do executável na atualização (revisão interna 6)
 
 - Atualização interna aguarda até cinco segundos pela liberação do executável após o processo encerrar. Evita falha intermitente de acesso no Windows, sem encerrar processos à força nem alterar arquivos ainda bloqueados.

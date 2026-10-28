@@ -238,3 +238,42 @@ fn running_application_blocks_update_and_uninstall_before_registration_changes()
     assert!(!o.root.exists());
     fs::remove_dir(parent).unwrap();
 }
+
+#[test]
+fn legacy_update_migrates_mis_registration_and_uninstaller_without_touching_user_data() {
+    let (parent, o) = temp();
+    installation::install(&o, b"MZ-original", b"MZ-legacy-setup").unwrap();
+    let path = o.root.join("installation.json");
+    let mut manifest: serde_json::Value =
+        serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    manifest["version"] = serde_json::json!("0.1.0");
+    fs::write(&path, serde_json::to_vec(&manifest).unwrap()).unwrap();
+    fs::write(o.root.join("flight.mis"), "personal survey").unwrap();
+    let source = parent.join("new.exe");
+    fs::write(&source, b"MZ-new-app-with-uninstall-mode").unwrap();
+    installation::replace_application(&o, &source).unwrap();
+    assert_eq!(
+        fs::read(o.root.join(UNINSTALL)).unwrap(),
+        fs::read(&source).unwrap()
+    );
+    assert!(!o.root.join("Uninstall.previous.exe").exists());
+    let association: serde_json::Value =
+        serde_json::from_slice(&fs::read(o.root.join("test-association.json")).unwrap()).unwrap();
+    assert_eq!(association["Extension"], ".mis");
+    assert!(
+        association["Command"]
+            .as_str()
+            .unwrap()
+            .ends_with(" --open \"%1\"")
+    );
+    installation::uninstall(&o).unwrap();
+    assert!(!o.root.join("test-association.json").exists());
+    assert_eq!(
+        fs::read_to_string(o.root.join("flight.mis")).unwrap(),
+        "personal survey"
+    );
+    fs::remove_file(o.root.join("flight.mis")).unwrap();
+    fs::remove_dir(&o.root).unwrap();
+    fs::remove_file(source).unwrap();
+    fs::remove_dir(parent).unwrap();
+}

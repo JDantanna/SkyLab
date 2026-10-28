@@ -1,4 +1,4 @@
-# SkyLab 0.1 — revisão de operação
+# SkyLab 0.2 — revisão de operação
 
 ## Tela inicial e atalhos
 
@@ -97,3 +97,18 @@ Windows x64, .NET Framework 4.6.2+, WebView2 Runtime e Microsoft Visual C++ 2015
 Instalador e desinstalador continuam preservando projetos, configurações e arquivos não pertencentes ao produto. Ao usar o instalador manualmente, feche todas as instâncias de SkyLab; a atualização interna encerra e reinicia a própria sessão. As revisões antigas podem estar abertas em outra janela; o programa não as encerra à força.
 
 Consulte GOOGLE-MAPS-CUSTOS.md para as franquias oficiais e limitações de uso gratuito. A marca aplicada no programa, instalador e executáveis é o S original com laboratório e linha aprovado pelo usuário.
+
+
+## Painéis e navegação durante a edição
+
+Arraste o título de um painel para reposicioná-lo. Solte nas zonas Esquerda, Direita ou Embaixo para encaixar; solte dentro da área de trabalho para manter flutuante. O seletor no título permite o mesmo encaixe pelo teclado. Arraste a borda entre uma lateral e o mapa para mudar sua largura; a alça inferior de cada painel muda sua altura, ou altura/largura quando flutuante. O botão − minimiza, × oculta. Ajuda → Painéis reabre os painéis e restaura o layout. O posicionamento é interno à janela SkyLab e é lembrado neste computador.
+
+A ferramenta Mover (mão) fica junto de Selecionar e Cortar. Segure Espaço para mover temporariamente durante a edição; soltar restaura a ferramenta anterior. O atalho não interfere na digitação em campos. Não modifica geometria nem cria passos no histórico.
+
+## Arquivos recentes e abertura MIS
+
+A tela inicial lista os últimos 12 arquivos abertos pelo seletor nativo, arrasto ou associação do Windows. Clique no nome para reabrir do disco; a projeção é confirmada novamente. Arquivos movidos ou excluídos mostram um aviso e podem ser removidos da lista com ×. A lista guarda apenas caminhos e nomes neste computador, sem copiar o levantamento.
+
+O instalador registra MIS no Windows para este usuário. Duplo clique abre uma aba; com três abas abertas, feche uma para receber o arquivo pendente. Se outro aplicativo já tiver sido escolhido como padrão, use Abrir com → SkyLab → Sempre uma vez. A atualização interna da 0.1 também instala esse registro e migra o desinstalador.
+
+Selecione linhas no mapa ou na lista; botão direito → Exportar seleção · MIS exporta somente elas. Shift mantém a seleção de intervalos. Todos os vértices são preservados; nomes duplicados precisam ser resolvidos ou exportados por camada separada.

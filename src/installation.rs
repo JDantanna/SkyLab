@@ -83,6 +83,8 @@ fn safe_root(o: &Options, existing: bool) -> Result<()> {
         "SkyLab-Rust.previous.exe",
         "SkyLab-Rust.new.exe",
         "Uninstall.new.exe",
+        "Uninstall.previous.exe",
+        "test-association.json",
     ] {
         if let Ok(meta) = fs::symlink_metadata(o.root.join(file))
             && (meta.file_type().is_symlink() || !meta.is_file())
@@ -232,6 +234,7 @@ fn install_source<F: Fn(&str, u8)>(
     fs::rename(unew, uninstaller).map_err(err)?;
     progress("Registrando aplicativo e atalhos", 80);
     run_script(include_str!("../scripts/register.ps1"),o).map_err(|e|format!("Arquivos instalados, mas o registro não terminou. Execute o instalador novamente para reparar. {e}"))?;
+    run_script(include_str!("../scripts/associate.ps1"), o)?;
     progress("Instalação concluída", 100);
     Ok(())
 }
@@ -243,6 +246,7 @@ pub fn uninstall_with_progress<F: Fn(&str, u8)>(o: &Options, progress: F) -> Res
     safe_root(o, true)?;
     check_app_closed(o)?;
     progress("Removendo atalhos e registro", 25);
+    run_script(include_str!("../scripts/unassociate.ps1"), o)?;
     run_script(include_str!("../scripts/unregister.ps1"), o)?;
     progress("Removendo arquivos do aplicativo", 50);
     for name in [
@@ -250,6 +254,8 @@ pub fn uninstall_with_progress<F: Fn(&str, u8)>(o: &Options, progress: F) -> Res
         "SkyLab-Rust.previous.exe",
         "SkyLab-Rust.new.exe",
         "Uninstall.new.exe",
+        "Uninstall.previous.exe",
+        "test-association.json",
         "THIRD-PARTY-NOTICES.txt",
     ] {
         let p = o.root.join(name);
@@ -321,7 +327,16 @@ pub fn replace_application(o: &Options, source: &Path) -> Result<()> {
         fs::remove_file(&previous).map_err(err)?;
     }
     fs::rename(&target, &previous).map_err(err)?;
+    let migrate_uninstaller = old.version.starts_with("0.1.");
+    let old_uninstaller = o.root.join("Uninstall.previous.exe");
     let result = (|| {
+        if migrate_uninstaller {
+            if old_uninstaller.exists() {
+                fs::remove_file(&old_uninstaller).map_err(err)?;
+            }
+            fs::copy(o.root.join(UNINSTALL), &old_uninstaller).map_err(err)?;
+            fs::copy(source, o.root.join(UNINSTALL)).map_err(err)?;
+        }
         fs::rename(&new, &target).map_err(err)?;
         fs::write(
             o.root.join("installation.json"),
@@ -333,9 +348,14 @@ pub fn replace_application(o: &Options, source: &Path) -> Result<()> {
             .map_err(err)?,
         )
         .map_err(err)?;
-        run_script(include_str!("../scripts/update-registration.ps1"), o)
+        run_script(include_str!("../scripts/update-registration.ps1"), o)?;
+        run_script(include_str!("../scripts/associate.ps1"), o)
     })();
     if let Err(error) = result {
+        if migrate_uninstaller && old_uninstaller.exists() {
+            fs::copy(&old_uninstaller, o.root.join(UNINSTALL)).map_err(err)?;
+            fs::remove_file(&old_uninstaller).map_err(err)?;
+        }
         if target.exists() {
             fs::remove_file(&target).map_err(err)?;
         }
@@ -364,6 +384,9 @@ pub fn replace_application(o: &Options, source: &Path) -> Result<()> {
         return Err(format!(
             "Atualização não aplicada; versão anterior restaurada. {error}"
         ));
+    }
+    if migrate_uninstaller && old_uninstaller.exists() {
+        fs::remove_file(old_uninstaller).map_err(err)?;
     }
     Ok(())
 }
