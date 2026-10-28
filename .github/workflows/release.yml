@@ -2,6 +2,8 @@ name: Windows installer
 on:
   workflow_dispatch:
   push:
+    branches: [main]
+    paths: ['BUILD_REVISION', '.github/workflows/release.yml']
     tags: ['v[0-9]*']
 permissions:
   contents: write
@@ -24,8 +26,11 @@ jobs:
           $metadata = cargo metadata --offline --no-deps --format-version 1 | ConvertFrom-Json
           $version = ($metadata.packages | Where-Object name -eq 'skylab-rust').version
           $label = $version -replace '\.0$', ''
-          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -notin @("v$version", "v$label")) { throw 'Tag does not match Cargo.toml' }
+          $revision = [uint32](Get-Content -Raw BUILD_REVISION).Trim()
+          $tag = "v$label-r$revision"
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne $tag) { throw 'Tag does not match approved version and build revision' }
           "SKYLAB_LABEL=$label" >> $env:GITHUB_ENV
+          "SKYLAB_RELEASE_TAG=$tag" >> $env:GITHUB_ENV
       - name: Build and verify
         run: |
           ./scripts/build.ps1
@@ -37,13 +42,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $tag = "v$env:SKYLAB_LABEL"
-          if ($env:GITHUB_REF_TYPE -eq 'tag') { $tag = $env:GITHUB_REF_NAME }
-          $asset = "SkyTEM-SkyLab-Setup-$env:SKYLAB_LABEL.exe"
+          $tag = $env:SKYLAB_RELEASE_TAG
+          $asset = "SkyTEM-SkyLab-Setup-$($tag.Substring(1)).exe"
           Copy-Item -LiteralPath dist/SkyTEM-SkyLab-Setup.exe -Destination $asset
           $hash = (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash.ToLower()
           "$hash  $asset" | Set-Content -Encoding utf8NoBOM SHA256SUMS.txt
           gh release view $tag *> $null
-          if ($LASTEXITCODE -eq 0) { throw 'Release already exists; never replace a published installer' }
+          if ($LASTEXITCODE -eq 0) { Write-Output 'Release already published; keeping its original installer'; exit 0 }
           gh release create $tag $asset SHA256SUMS.txt --target $env:GITHUB_SHA --title "SkyLab $env:SKYLAB_LABEL" --notes-file RELEASE-NOTES.md --latest
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

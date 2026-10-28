@@ -1,5 +1,37 @@
 use skylab_rust::updates;
 #[test]
+fn github_detects_new_builds_without_changing_the_approved_version() {
+    let fixture = |tag: &str| {
+        serde_json::json!({"tag_name":tag,"assets":[{"name":"SkyTEM-SkyLab-Setup-0.1-r2.exe","state":"uploaded","browser_download_url":"https://github.com/JDantanna/SkyLab/releases/download/v0.1-r2/SkyTEM-SkyLab-Setup-0.1-r2.exe"}]}).to_string()
+    };
+    let revision = updates::build_revision();
+    let check = updates::github_release(&fixture(&format!("v0.1-r{}", revision + 1))).unwrap();
+    assert_eq!(check.status, "available");
+    assert_eq!(check.latest_version.as_deref(), Some("0.1"));
+    assert_eq!(check.latest_revision, Some(revision + 1));
+    assert_eq!(check.current_revision, revision);
+    assert_eq!(
+        updates::github_release(&fixture(&format!("v0.1-r{revision}")))
+            .unwrap()
+            .status,
+        "up_to_date"
+    );
+    assert_eq!(
+        updates::github_release(&fixture("v0.1-r0")).unwrap().status,
+        "up_to_date"
+    );
+    for bad in ["v0.1-r", "v0.1-r-1", "v0.1-rx", "v0.1-r4294967296"] {
+        assert!(updates::github_release(&fixture(bad)).is_err());
+    }
+    let pending = updates::github_release(&format!(
+        r#"{{"tag_name":"v0.1-r{}","assets":[]}}"#,
+        revision + 1
+    ))
+    .unwrap();
+    assert_eq!(pending.status, "release_pending");
+    assert!(pending.download_url.is_none());
+}
+#[test]
 fn github_releases_only_offer_newer_stable_installers_from_this_repository() {
     let release = |tag: &str, url: &str| {
         serde_json::json!({"tag_name":tag,"body":"Release notes","assets":[{"name":"SkyTEM-SkyLab-Setup-0.2.exe","state":"uploaded","browser_download_url":url}]}).to_string()

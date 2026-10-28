@@ -1,5 +1,12 @@
 use std::{env, fs, path::PathBuf, process::Command};
 fn main() {
+    println!("cargo:rerun-if-changed=BUILD_REVISION");
+    let revision: u32 = fs::read_to_string("BUILD_REVISION")
+        .expect("BUILD_REVISION missing")
+        .trim()
+        .parse()
+        .expect("Invalid build revision");
+    println!("cargo:rustc-env=SKYLAB_BUILD_REVISION={revision}");
     println!("cargo:rerun-if-changed=assets/app.ico");
     if env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("windows") {
         return;

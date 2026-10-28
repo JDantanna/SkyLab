@@ -1,5 +1,7 @@
 SkyLab 0.1
 
+Includes the native startup logo crash fix and update checks that recognize internal revisions of version 0.1. Older installations require this installer once before revision updates can be detected.
+
 - Compact logo menu and up to three independent project tabs.
 - Live previews with sliders for grid generation, trimming and splitting.
 - Integrated window controls and logo startup screen.

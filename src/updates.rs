@@ -13,6 +13,7 @@ struct Config {
 #[derive(Deserialize)]
 struct Manifest {
     version: String,
+    revision: Option<u32>,
     download_url: Option<String>,
     notes: Option<String>,
 }
@@ -20,10 +21,35 @@ struct Manifest {
 pub struct Check {
     pub status: String,
     pub current_version: String,
+    pub current_revision: u32,
     pub latest_version: Option<String>,
+    pub latest_revision: Option<u32>,
     pub download_url: Option<String>,
     pub notes: Option<String>,
     pub message: String,
+}
+pub fn build_revision() -> u32 {
+    env!("SKYLAB_BUILD_REVISION")
+        .parse()
+        .expect("validated build revision")
+}
+fn release_version(tag: &str) -> Result<(&str, u32)> {
+    let tag = tag.strip_prefix('v').unwrap_or(tag);
+    let (number, revision) = if let Some((number, revision)) = tag.split_once("-r") {
+        if revision.is_empty() || !revision.bytes().all(|b| b.is_ascii_digit()) {
+            return Err("Revisão de atualização inválida.".into());
+        }
+        (
+            number,
+            revision
+                .parse::<u32>()
+                .map_err(|_| "Revisão de atualização inválida.")?,
+        )
+    } else {
+        (tag, 0)
+    };
+    version(number)?;
+    Ok((number, revision))
 }
 fn version(s: &str) -> Result<[u32; 3]> {
     let mut n = [0; 3];
@@ -66,7 +92,9 @@ pub fn check_at(path: &Path) -> Result<Check> {
         return Ok(Check {
             status: "not_configured".into(),
             current_version: current,
+            current_revision: build_revision(),
             latest_version: None,
+            latest_revision: None,
             download_url: None,
             notes: None,
             message: "Fonte de atualização não configurada.".into(),
@@ -120,11 +148,14 @@ pub fn check_at(path: &Path) -> Result<Check> {
     if manifest.notes.as_ref().is_some_and(|s| s.len() > 4096) {
         return Err("Notas de atualização muito extensas.".into());
     }
-    let newer = version(&manifest.version)? > version(env!("CARGO_PKG_VERSION"))?;
+    let newer = (version(&manifest.version)?, manifest.revision.unwrap_or(0))
+        > (version(env!("CARGO_PKG_VERSION"))?, build_revision());
     Ok(Check {
         status: if newer { "available" } else { "up_to_date" }.into(),
         current_version: current,
+        current_revision: build_revision(),
         latest_version: Some(manifest.version),
+        latest_revision: manifest.revision,
         download_url: manifest.download_url,
         notes: manifest.notes,
         message: if newer {
@@ -201,7 +232,9 @@ pub fn github_release(text: &str) -> Result<Check> {
     let mut result = Check {
         status: "no_release".into(),
         current_version: display_version().into(),
+        current_revision: build_revision(),
         latest_version: None,
+        latest_revision: None,
         download_url: None,
         notes: None,
         message: "Nenhuma versão publicada no GitHub.".into(),
@@ -212,9 +245,11 @@ pub fn github_release(text: &str) -> Result<Check> {
     let tag = release
         .tag_name
         .ok_or("Versão ausente na resposta do GitHub.")?;
-    let latest = tag.strip_prefix('v').unwrap_or(&tag);
-    let newer = version(latest)? > version(env!("CARGO_PKG_VERSION"))?;
+    let (latest, revision) = release_version(&tag)?;
+    let newer =
+        (version(latest)?, revision) > (version(env!("CARGO_PKG_VERSION"))?, build_revision());
     result.latest_version = Some(latest.into());
+    result.latest_revision = Some(revision);
     result.notes = release.body.map(|s| s.chars().take(4096).collect());
     result.download_url = release
         .assets

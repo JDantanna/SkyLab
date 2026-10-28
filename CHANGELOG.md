@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 0.1 — atualizador e distribuição
+
+- Controle de revisão interna para reconhecer correções sem mudar a versão 0.1.
+- Publicação do instalador com SHA256 pelo GitHub Actions ao atualizar BUILD_REVISION em main.
+- Instalações anteriores a esse controle precisam de uma instalação manual inicial.
+
 ## 0.1 — correção da abertura (sem avanço de versão)
 
 - Corrigida exceção `Intervalo solicitado ultrapassa o fim da matriz` na conversão da logo do splash pelo .NET Framework. Os quadros PNG do ICO são renderizados pelo identificador nativo do Windows.
