@@ -293,7 +293,16 @@ fn check_app_closed(o: &Options) -> Result<()> {
 /// Update only the owned application. Shortcuts, uninstaller and personal files stay in place.
 pub fn replace_application(o: &Options, source: &Path) -> Result<()> {
     safe_root(o, true)?;
-    check_app_closed(o)?;
+    // The process handle can be signalled before Windows releases its image mapping.
+    // Wait only for write access; no installation files are changed while it is locked.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        match check_app_closed(o) {
+            Ok(()) => break,
+            Err(error) if std::time::Instant::now() >= deadline => return Err(error),
+            Err(_) => std::thread::sleep(std::time::Duration::from_millis(100)),
+        }
+    }
     let old_manifest = fs::read(o.root.join("installation.json")).map_err(err)?;
     let old = read_manifest(&o.root)?;
     let mut magic = [0; 2];

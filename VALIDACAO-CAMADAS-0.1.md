@@ -1,6 +1,6 @@
 # Validação — camadas e controles — 28/10/2026
 
-Versão exibida 0.1; revisão interna 5.
+Versão exibida 0.1; revisão interna 6.
 
 - Interface: criou New project 1, fechou a última aba, retornou à tela inicial e criou New project 1 novamente. Uma aba adicional recebeu New project 2. Identificadores internos continuam únicos; rótulos independem deles.
 - Importação real pela interface de três arquivos sintéticos escolhidos juntos: Area.kmz, Reference.mis e Flown.mis. CRS confirmado em cada importação. As três camadas apareceram separadas, com um polígono e quatro linhas em cada MIS. Nomes iguais entre os dois MIS foram mantidos.
@@ -12,3 +12,5 @@ Versão exibida 0.1; revisão interna 5.
 - KMZ: leitura de doc.kml sem extração; recusa de arquivos ambíguos, base64 inválido e conteúdo sem ZIP. Limites de tamanho e quantidade de entradas aplicados.
 
 Os dados usados são sintéticos. A validação de software não homologa arquivos para o navegador de bordo; a revisão operacional continua necessária.
+
+- A conferência do pacote publicado revelou uma liberação tardia do executável pelo Windows. O atualizador passou a aguardar o desbloqueio antes de iniciar a substituição; teste determinístico com bloqueio temporário de arquivo cobre essa condição.

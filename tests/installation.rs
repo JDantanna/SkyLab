@@ -88,6 +88,32 @@ fn invalid_payload_does_not_create_installation() {
 }
 
 #[test]
+fn internal_update_waits_for_a_transient_image_file_lock_without_killing_processes() {
+    use std::os::windows::fs::OpenOptionsExt;
+    let (parent, o) = temp();
+    installation::install(&o, b"MZ-old", b"MZ-setup").unwrap();
+    let source = parent.join("update.exe");
+    fs::write(&source, b"MZ-new").unwrap();
+    let guard = fs::OpenOptions::new()
+        .read(true)
+        .share_mode(1)
+        .open(o.root.join(APP))
+        .unwrap();
+    let started = std::time::Instant::now();
+    let unlock = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(600));
+        drop(guard);
+    });
+    installation::replace_application(&o, &source).unwrap();
+    assert!(started.elapsed() >= std::time::Duration::from_millis(300));
+    unlock.join().unwrap();
+    assert_eq!(fs::read(o.root.join(APP)).unwrap(), b"MZ-new");
+    installation::uninstall(&o).unwrap();
+    fs::remove_file(source).unwrap();
+    fs::remove_dir(parent).unwrap();
+}
+
+#[test]
 fn internal_update_preserves_uninstaller_shortcuts_and_personal_files_and_rolls_back_failure() {
     let (parent, o) = temp();
     installation::install(&o, b"MZ-original", b"MZ-setup").unwrap();

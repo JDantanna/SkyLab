@@ -1,5 +1,6 @@
-SkyLab 0.1 — internal revision 5. The visible version remains 0.1.
+SkyLab 0.1 — internal revision 6. The visible version remains 0.1.
 
+- Internal updater waits briefly for Windows to release the previous executable after process exit, avoiding an intermittent rollback without changing any files while locked.
 - Untitled project numbers follow open tabs. Returning home and creating a project starts at New project 1 again; internal document identifiers remain stable.
 - Distinct update/download and automatic-save icons. Header hover enlarges only the artwork, without expanding or framing its button.
 - Source is now a project-layer manager. Imported MIS/MISSION, KML and KMZ files remain separate, expandable groups containing their polygons and lines.

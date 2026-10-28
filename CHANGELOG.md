@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 0.1 — liberação do executável na atualização (revisão interna 6)
+
+- Atualização interna aguarda até cinco segundos pela liberação do executável após o processo encerrar. Evita falha intermitente de acesso no Windows, sem encerrar processos à força nem alterar arquivos ainda bloqueados.
+- Mantém as funções de camadas, arrasto nos rótulos e troca direta do mapa da revisão 5.
+
+
 ## 0.1 — camadas e controles de edição (revisão interna 5)
 
 - Numeração de projetos sem acumular os já fechados; ícones distintos de atualização e salvamento automático.
