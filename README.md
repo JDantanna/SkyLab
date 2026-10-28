@@ -4,7 +4,7 @@ Primeira versão utilizável, local, do fluxo de missões do SkyLab para helicó
 
 ## Instalar e abrir
 
-Execute **SkyTEM-SkyLab-Setup-0.1-otimizado.exe**, entregue junto ao pacote. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
+Obtenha **SkyTEM-SkyLab-Setup-0.1-r3.exe** na [Release 0.1](https://github.com/JDantanna/SkyLab/releases/tag/v0.1-r3) e execute o instalador. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
 
 Abra **SkyLab** pelo menu Iniciar ou pelo atalho. A janela Windows usa WebView2 e controles integrados ao cabeçalho azul, sem a moldura do navegador. A versão exibida é **0.1** (0.1.0 no pacote Rust). Antes de qualquer avanço de versão, será solicitada uma decisão explícita do usuário.
 
@@ -12,7 +12,7 @@ O aplicativo requer Windows 64 bits (x64), .NET Framework 4.6.2 ou posterior Mic
 
 O aplicativo atende normalmente em **http://127.0.0.1:8787**. Se a versão portável anterior estiver usando a porta, encerre-a antes de abrir esta versão ou inicie o executável com outra porta: `SkyLab-Rust.exe --port 8780`. `--no-open` inicia sem abrir a interface. Uma segunda abertura reconhece a instância desta versão quando já está ativa.
 
-Para atualizar/reparar, feche o SkyLab e execute o novo instalador. Para remover, use **Aplicativos instalados** do Windows ou `Uninstall.exe` na pasta do programa. Arquivos pessoais e projetos não são removidos. Somente arquivos reconhecidos da instalação são substituídos ou apagados. O instalador não é MSI e instala por usuário; implantação administrativa por máquina ainda não foi implementada.
+Para atualizar, use o símbolo de atualização e confirme **Update and restart**: o aplicativo baixa um pacote verificado e reinicia, recuperando até três abas. Instalações da revisão 2 ou anteriores precisam deste instalador uma vez para ativar o novo mecanismo. Para reparar, feche o SkyLab e execute o instalador. Para remover, use **Aplicativos instalados** do Windows ou `Uninstall.exe` na pasta do programa. Arquivos pessoais e projetos não são removidos. Somente arquivos reconhecidos da instalação são substituídos ou apagados. O instalador não é MSI e instala por usuário; implantação administrativa por máquina ainda não foi implementada.
 
 Os executáveis têm ícone e informações de versão, mas **não possuem assinatura digital corporativa**. A distribuição para outros computadores deve incluir a validação da empresa e, quando disponível, sua assinatura de código.
 
@@ -45,7 +45,7 @@ Os arquivos reais foram lidos somente localmente; não estão incluídos neste p
 
 ## Implementação e testes
 
-`src/projection.rs`: catálogo e transformação PROJ offline. `src/lib.rs`: projeção WGS84/UTM, leitura/escrita MIS/KML, validação topológica, geração, recorte e corte por distância. `src/main.rs`: servidor local e API de planejamento sem gravação de arquivos. `src/installation.rs` e `src/bin/setup.rs`: instalação, atualização e desinstalação. `web/` e `installer/`: interfaces incorporadas nos executáveis. `tests/`: testes independentes do acervo confidencial. `vendor/`: dependências e licenças para compilação offline; `Cargo.lock` fixa as versões. `native/Host.cs` hospeda a janela Windows. `build.rs` compila esse adaptador e incorpora ícone/metadados.
+`src/projection.rs`: catálogo e transformação PROJ offline. `src/lib.rs`: projeção WGS84/UTM, leitura/escrita MIS/KML, validação topológica, geração, recorte e corte por distância. `src/editing.rs`: corte por traço preservando vértices. `src/self_update.rs`: atualização interna e recuperação da sessão. `src/main.rs`: servidor local e API de planejamento. `src/installation.rs` e `src/bin/setup.rs`: instalação, atualização e desinstalação. `web/` e `installer/`: interfaces incorporadas nos executáveis. `tests/`: testes independentes do acervo confidencial. `vendor/`: dependências e licenças para compilação offline; `Cargo.lock` fixa as versões. `native/Host.cs` hospeda a janela Windows. `build.rs` compila esse adaptador e incorpora ícone/metadados.
 
 Com Rust instalado, dentro desta pasta:
 

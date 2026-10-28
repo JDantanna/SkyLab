@@ -14,7 +14,7 @@ Ao abrir cada arquivo, o diálogo de coordenadas sempre aparece antes de alterar
 
 É possível manter o sistema atual ou adotar o escolhido. Ao adicionar dados em outro sistema, os dados existentes são reprojetados antes da união; nunca se juntam coordenadas de sistemas diferentes apenas trocando o rótulo. Cancelar não altera o projeto. Falhas de transformação também preservam o projeto anterior.
 
-O cabeçalho apresenta SkyLab, Novo projeto, Salvar projeto e Exportar alinhados à esquerda. Clique em SkyLab para abrir Sobre. O ícone de duas setas consulta atualizações. Abrir exemplo fica no fim de Ajuda. O botão de arquivo passa de Selecionar arquivo a Adicionar arquivo quando um projeto está aberto; após cada importação, o mapa enquadra a geometria recém-importada.
+Clique na logo SkyLab para abrir o menu com Novo projeto, Salvar projeto, Exportar, Ajuda e Sobre. A faixa abaixo do cabeçalho contém até três abas independentes. O ícone de duas setas consulta atualizações. Abrir exemplo fica no fim de Ajuda. O botão de arquivo passa de Selecionar arquivo a Adicionar arquivo quando um projeto está aberto; após cada importação, o mapa enquadra a geometria recém-importada.
 
 ## Seleção e edição
 
@@ -26,7 +26,19 @@ O fim do painel de linhas mostra a soma de todas as linhas e, separadamente, qua
 
 Ctrl+Z desfaz; Ctrl+Y ou Ctrl+Shift+Z refaz. Há até 30 etapas na sessão, com referências aos estados imutáveis dos projetos para evitar cópias adicionais no histórico. Também são restaurados seleção, enquadramento e identificação do arquivo. Editar depois de desfazer inicia um novo ramo e elimina o refazer anterior. Dentro de um campo de texto, Ctrl+Z mantém o comportamento de edição do próprio campo; o botão Desfazer atua no projeto. O histórico não é gravado no arquivo JSON.
 
-Salvar e exportar usam o diálogo nativo de arquivos. O programa só informa sucesso depois da conclusão da gravação; cancelar mantém o projeto como não salvo. Não há moldura, menus de navegação, aviso de saída de página ou painel de downloads. Sobre contém marca, versão e atualização; fechar o programa usa o botão da janela.
+Salvar e exportar usam o diálogo nativo de arquivos. O programa só informa sucesso depois da conclusão da gravação; cancelar mantém o projeto como não salvo. Não há moldura, menus de navegação, aviso de saída de página ou painel de downloads. Sobre contém as marcas SkyLab/SkyTEM, versão e contato de suporte; fechar o programa usa o botão da janela.
+
+## Corte por traço
+
+Clique no lápis junto de Satélite e Enquadrar para abrir as ferramentas. Em **Cut with stroke**, pressione e arraste sobre as linhas para dividi-las onde houver interseção. Os vértices originais, as curvas e o sentido são preservados; os trechos recebem nomes distintos. O corte não apaga nenhum trecho.
+
+Em **Select**, clique em um trecho ou arraste um retângulo para selecionar vários; Shift acrescenta ao conjunto. A lista acompanha o destaque do mapa. Use **Delete selected lines** ou Delete para excluir. Ctrl+Z desfaz cada corte ou exclusão como uma operação. Desative o lápis para voltar ao arrasto de navegação do mapa. Traços sobrepostos ao longo de uma linha não criam cortes; cruze a linha na posição desejada.
+
+## Atualização interna
+
+Clique no símbolo de atualização e, quando houver publicação posterior, confirme **Update and restart**. O programa verifica e aplica o pacote do GitHub e reinicia. Recupera as três abas, inclusive dados não salvos, seleção, enquadramento e valores dos campos. O histórico de desfazer inicia uma nova sessão após reiniciar. Durante a atualização, aguarde o término.
+
+Revisões 2 ou anteriores precisam executar o instalador desta revisão uma vez para receber o novo mecanismo. Atualizações futuras usam o fluxo interno. Detalhes em ATUALIZACOES.md.
 
 ## Catálogo de coordenadas
 
@@ -54,6 +66,6 @@ As linhas são convertidas do CRS do projeto para longitude/latitude WGS84 em Ru
 
 Windows x64, .NET Framework 4.6.2+, WebView2 Runtime e Microsoft Visual C++ 2015–2022 x64 Runtime. Todos estão presentes nesta máquina. As bibliotecas e licenças PROJ são incluídas; QGIS não precisa estar instalado para usar o SkyLab. Grades adicionais são opcionais e dependem do datum.
 
-Instalador e desinstalador continuam preservando projetos, configurações e arquivos não pertencentes ao produto. Antes de atualizar, feche todas as instâncias de SkyLab. As revisões antigas podem estar abertas em outra janela; o programa não as encerra à força.
+Instalador e desinstalador continuam preservando projetos, configurações e arquivos não pertencentes ao produto. Ao usar o instalador manualmente, feche todas as instâncias de SkyLab; a atualização interna encerra e reinicia a própria sessão. As revisões antigas podem estar abertas em outra janela; o programa não as encerra à força.
 
 Consulte GOOGLE-MAPS-CUSTOS.md para as franquias oficiais e limitações de uso gratuito. A marca aplicada no programa, instalador e executáveis é o S original com laboratório e linha aprovado pelo usuário.
