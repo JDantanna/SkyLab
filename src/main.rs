@@ -233,6 +233,7 @@ fn process(r: Request) -> Result<Value> {
             p.polygons.clear();
             return Ok(json!({"text":export_mis(&p)?}));
         }
+        "line-blocks" => return Ok(json!(blocks::assign(&p))),
         "validate" => return Ok(json!(p)),
         "generate" => {
             let settings = r.settings.ok_or("Parâmetros ausentes")?;

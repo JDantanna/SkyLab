@@ -223,6 +223,7 @@ internal sealed class ShellWindow : Form {
                     browser.CoreWebView2.PostWebMessageAsString(operation.State==CoreWebView2DownloadState.Completed?"file-saved":"save-failed");
                 };
                 operation.StateChanged+=finished;
+                finished(operation,null);
             };
             browser.CoreWebView2.WindowCloseRequested+=delegate{allowClose=true;Close();};
             browser.CoreWebView2.WebMessageReceived+=Message;

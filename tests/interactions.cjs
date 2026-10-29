@@ -9,8 +9,8 @@ test('project shortcuts preserve text editing and avoid acting behind dialogs',(
 });
 function harness(){
  const elements=new Map(),listeners={};const element=id=>{if(!elements.has(id))elements.set(id,{value:'23',textContent:id==='project-title'?'Synthetic project':'Synthetic source',hidden:true});return elements.get(id);};
- const context=vm.createContext({console,Set,structuredClone,window:{SkyLabInteractions:interactions,skyAuthority:null},document:{activeElement:{tagName:'BODY'},querySelector:()=>null,addEventListener:(name,handler)=>listeners[name]=handler},$:element,render(){},status(){},refreshSatellite(){},getCrs:()=>({zone:23,south:true}),tr:s=>s});
- vm.runInContext('let selectedPolygon=-1;let project={polygons:[],lines:Array.from({length:12},(_,i)=>({name:"L"+i,points:[[i,0],[i,100]]}))},selected=4,selection=new Set([4]),selectionAnchor=4,view={x:100,y:200,span:500},history=[],future=[],busy=false,dirty=false;const selectedIndices=()=>[...selection].filter(i=>project?.lines[i]);',context);
+ const context=vm.createContext({console,Set,structuredClone,SkyLabInteractions:interactions,window:{SkyLabInteractions:interactions,skyAuthority:null},document:{activeElement:{tagName:'BODY'},querySelector:()=>null,addEventListener:(name,handler)=>listeners[name]=handler},$:element,render(){},status(){},refreshSatellite(){},getCrs:()=>({zone:23,south:true}),tr:s=>s});
+ vm.runInContext('let selectedPolygon=-1,lineScope=null;let project={polygons:[],lines:Array.from({length:12},(_,i)=>({name:"L"+i,points:[[i,0],[i,100]]}))},selected=4,selection=new Set([4]),selectionAnchor=4,view={x:100,y:200,span:500},history=[],future=[],busy=false,dirty=false;const selectedIndices=()=>[...selection].filter(i=>project?.lines[i]);',context);
  const source=fs.readFileSync(require.resolve('../web/workspace.js'),'utf8');const code=source.slice(source.indexOf('const HISTORY_LIMIT='),source.indexOf("async function selectionMutation"));vm.runInContext(code,context);
  const app=fs.readFileSync(require.resolve('../web/app.js'),'utf8'),start=app.indexOf("document.addEventListener('keydown',"),end=app.indexOf('\nasync function download',start);vm.runInContext(app.slice(start,end),context);
  return {context,listeners,element,run:code=>vm.runInContext(code,context)};
@@ -42,4 +42,19 @@ test('adding a file fits the added geometry, retains existing lines and undo res
  assert.equal(h.run('project.lines.length'),13);assert.equal(h.run('view.x'),500050);assert.equal(h.run('view.y'),7800050);assert.equal(h.run('view.span'),195);assert.equal(h.element('source-info').textContent,'synthetic.kml');
  assert.equal(h.run('project.layers.length'),2);assert.notEqual(h.run('project.lines[0].layer'),h.run('project.lines[12].layer'));
  h.run('undo()');assert.equal(h.run('project.lines.length'),12);assert.equal(h.run('view.x'),100);
+});
+
+test('Ctrl toggles individual lines while Shift selects an interval',()=>{
+ const h=harness();h.element('search').value='';h.element('line-list').querySelector=()=>null;
+ const source=fs.readFileSync(require.resolve('../web/workspace.js'),'utf8');vm.runInContext(source.slice(source.indexOf('select=function'),source.indexOf('const HISTORY_LIMIT=')),h.context);
+ h.run('select(2);select(7,false,true);select(10,false,true)');assert.deepEqual(Array.from(h.run('[...selection]')),[2,7,10]);
+ h.run('select(7,false,true)');assert.deepEqual(Array.from(h.run('[...selection]')),[2,10]);
+ h.run('select(5);select(8,true)');assert.deepEqual(Array.from(h.run('[...selection]')),[5,6,7,8]);
+ h.run('select(5);select(5,false,true)');assert.equal(h.run('selection.size'),0);assert.equal(h.run('selected'),-1);
+});
+test('batch names follow project order, preserve gaps and reject numeric overflow',()=>{
+ const lines=Array.from({length:5},(_,i)=>({name:'OLD'+i})),config={prefix:'L',first:100100,increment:100,digits:6};
+ const rows=interactions.sequence(lines,[4,0,2],config);assert.deepEqual(rows,[{index:0,name:'L100100'},{index:2,name:'L100200'},{index:4,name:'L100300'}]);assert.equal(lines[1].name,'OLD1');
+ assert.deepEqual(interactions.sequence(lines,[0,1],{...config,first:1,digits:4}).map(r=>r.name),['L0001','L0101']);
+ for(const change of [{first:-1},{first:4294967295},{increment:0},{increment:1.5},{digits:0},{prefix:'x\n'}])assert.throws(()=>interactions.sequence(lines,[0,2],{...config,...change}));
 });

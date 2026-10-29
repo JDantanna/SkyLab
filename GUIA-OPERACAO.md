@@ -1,4 +1,4 @@
-# SkyLab 0.2 — revisão de operação
+# SkyLab 0.3 — revisão de operação
 
 ## Tela inicial e atalhos
 
@@ -125,3 +125,7 @@ Shift + clique no contorno externo selecionado insere uma âncora mantendo o for
 Salvar projeto preserva âncoras e alças em JSON formato 4. Formatos anteriores continuam legíveis; versões antigas do aplicativo não abrem o formato novo. Reprojetar lineariza as curvas e deixa uma nota, mantendo o contorno. Exportar a camada em JSON preserva edição; em KML exporta o contorno e seus furos. Os cálculos têm tolerância de 0,1 m na aproximação das curvas.
 
 Clique no botão de importação da área vazia, use Abrir no menu SkyLab ou Adicionar arquivo no botão direito do mapa. O painel de camadas fica dedicado à organização dos dados.
+
+## Seleção e renomeação em lote
+
+O painel Linhas da missão acompanha o bloco ativo indicado acima da lista. Selecione um polígono para trocar de bloco ou o título de uma camada para trabalhar naquela origem. Ctrl + clique alterna linhas individuais, Shift seleciona intervalos e botão direito > Renomear linhas abre a sequência com prévia. P ativa a Caneta; F1 permite trocar o atalho.

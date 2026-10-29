@@ -1,11 +1,11 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const keys=require('../web/keybindings.js'),tiles=require('../web/tiles.js');
 test('editable shortcuts preserve requested order, survive reload and reject duplicate or reserved combinations',()=>{
- assert.deepEqual(Object.keys(keys.defaults),['new','open','save','delete','select','cut']);
+ assert.deepEqual(Object.keys(keys.defaults),['new','open','save','delete','select','cut','pen']);
  assert.equal(keys.chord({key:'n',ctrlKey:true}),'Ctrl+N');assert.equal(keys.chord({key:'q'}),'Q');
  const changed=keys.assign(keys.defaults,'cut','X');assert.equal(keys.load(JSON.parse(JSON.stringify(changed))).cut,'X');
  assert.throws(()=>keys.assign(changed,'cut','V'),/duplicate/);assert.throws(()=>keys.assign(changed,'cut','F1'),/reserved/);
- assert.deepEqual(keys.load({cut:'bad'}),keys.defaults);
+ assert.deepEqual(keys.load({cut:'bad'}),keys.defaults);assert.equal(keys.defaults.pen,'P');const old={...changed};delete old.pen;assert.equal(keys.load(old).cut,'X');assert.equal(keys.load(old).pen,'P');old.cut='P';assert.equal(keys.load(old).cut,'P');assert.equal(keys.load(old).pen,'Shift+P');
 });
 test('XYZ projection aligns imagery, click selection and knife coordinates at several zooms',()=>{
  for(const p of [[-45,-20],[12.5,55.7],[-120,60],[179.9,-30]])for(const z of [0,7,14,20]){

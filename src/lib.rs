@@ -1,6 +1,7 @@
 //! Local mission geometry. Working coordinates use a projected CRS in metres.
 use serde::{Deserialize, Serialize};
 use std::fmt::Write as _;
+pub mod blocks;
 pub mod curves;
 pub mod desktop;
 pub mod editing;

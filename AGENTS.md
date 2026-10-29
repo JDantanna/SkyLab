@@ -7,9 +7,9 @@
 - Para distribuir, executar scripts/build.ps1, testar o instalador em modo --test-root e verificar instalação/atualização/desinstalação preservando arquivos pessoais. Compilação é offline; Windows SDK fornece rc.exe para ícone/metadados.
 - Executar cargo clippy --all-targets --features installer --offline -- -D warnings depois que payload/SkyLab-Rust.exe tiver sido gerado.
 - Atualizar Cargo.toml, CHANGELOG.md e os relatórios de validação ao criar uma versão. A versão de registro do instalador vem de Cargo.toml.
-- A versão aprovada explicitamente para esta build é 0.2 (internamente 0.2.0). Em cada novo pedido de modificações, perguntar se deseja avançar a versão e só incrementar após resposta explícita.
+- A versão aprovada explicitamente para esta build é 0.3 (internamente 0.3.0). Em cada novo pedido de modificações, perguntar se deseja avançar a versão e só incrementar após resposta explícita.
 - Os avanços seguem 0.1, 0.2, 0.3; não saltar para 1.0 por iniciativa própria.
-- BUILD_REVISION é somente o identificador interno das correções publicadas; aumentar ao publicar uma nova compilação da mesma versão. O número exibido permanece 0.2 até nova aprovação expressa. O fluxo de Releases publica a combinação imutável versão/revisão.
+- BUILD_REVISION é somente o identificador interno das correções publicadas; aumentar ao publicar uma nova compilação da mesma versão. O número exibido permanece 0.3 até nova aprovação expressa. O fluxo de Releases publica a combinação imutável versão/revisão.
 - Interface institucional: nome, marca e comandos diretos. Não incluir slogans, chamadas de venda ou mensagens promocionais. Usar janela WebView2 própria com controles integrados; não voltar ao Edge em modo aplicativo.
 - Guardar artefatos em dist/ ou como entregas locais; não versionar executáveis, pastas temporárias, payload ou levantamentos.
 - Histórico em main, com remoto autorizado https://github.com/JDantanna/SkyLab. Atualizações consultam Releases desse repositório; tags sozinhas não distribuem instaladores. Não afirmar que existe atualização automática no GPT.

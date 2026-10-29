@@ -1,5 +1,15 @@
 # Histórico de versões
 
+## 0.3 — seleção, blocos e acabamento (revisão interna 1)
+
+- Caneta com ícone de pena e atalho P configurável no painel F1.
+- Ctrl alterna linhas individuais; menu contextual renomeia a seleção em sequência com prévia e desfazer.
+- Painel de linhas acompanha bloco/camada ativos, com identificação visível e contexto separado da seleção.
+- Corrigida a altura da linha selecionada nas camadas; números dos painéis removidos.
+- Ajuda e Sobre sempre ao final do menu; Jørgen Nissen incluído e logo azul restaurada no Sobre.
+- Fechamento de abas informa operação em andamento ou salvamento incompleto; download nativo detecta conclusão imediata.
+
+
 ## 0.2 — polígonos e revisão do código (revisão interna 3)
 
 - Geração e prévia na barra contextual do polígono selecionado; comandos de edição em faixa superior.

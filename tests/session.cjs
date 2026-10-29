@@ -18,3 +18,21 @@ test('switching document cancels pending success and failure without leaking a p
  q.request('A');clearTimeout(q.timer);let run=q.flush();q.cancel();resolve('late A');await run;assert.deepEqual(painted,[]);
  q.request('B');clearTimeout(q.timer);run=q.flush();q.cancel();reject(Error('late error'));await run;await pause();assert.deepEqual(painted,[]);
 });
+
+function closeHarness(){
+ const fs=require('node:fs'),vm=require('node:vm'),source=fs.readFileSync(require.resolve('../web/studio.js'),'utf8'),elements=new Map();
+ const $=id=>{if(!elements.has(id))elements.set(id,{open:false,textContent:'',onclick:null,addEventListener(){},showModal(){assert(!this.open);this.open=true;},close(){this.open=false;}});return elements.get(id);};
+ const docs=new (require('../web/session.js').Documents)();docs.add({dirty:true});docs.add({dirty:false});
+ const context=vm.createContext({$,documents:docs,clone:structuredClone,blankDocument:{dirty:false},clearLivePreview(){},saveActiveDocument(){},applyDocument(s){context.dirty=s.dirty;},activateDocument(id){docs.activate(id);context.dirty=docs.current().state.dirty;},tr:s=>s,status:s=>context.message=s});context.busy=false;context.dirty=false;context.closingDocument=null;context.newDocument=()=>{};
+ vm.runInContext(source.slice(source.indexOf('function closeDocument('),source.indexOf('window.skyLabCanClose=')),context);return{context,docs,$,run:code=>vm.runInContext(code,context)};
+}
+test('closing a tab explains busy state, prompts once, and discards only the requested tab',()=>{
+ const h=closeHarness();h.run('busy=true;requestCloseDocument(1)');assert.match(h.context.message,/Aguarde/);assert.equal(h.docs.items.length,2);
+ h.run('busy=false;requestCloseDocument(1);requestCloseDocument(1)');assert(h.$('close-project-dialog').open);h.$('discard-project-close').onclick();assert.deepEqual(h.docs.items.map(d=>d.id),[2]);assert(!h.$('close-project-dialog').open);
+});
+test('cancelled save keeps the tab open and visibly explains why',async()=>{
+ const h=closeHarness();h.$('save').onclick=async()=>{};h.run('requestCloseDocument(1)');await h.$('save-project-close').onclick();assert.equal(h.docs.items.length,2);assert(h.$('close-project-dialog').open);assert.match(h.$('project-close-message').textContent,/salvamento/);
+});
+test('successful save closes the intended tab and restores the remaining active document',async()=>{
+ const h=closeHarness();h.$('save').onclick=async()=>{h.context.dirty=false;};h.run('requestCloseDocument(1)');await h.$('save-project-close').onclick();assert.deepEqual(h.docs.items.map(d=>d.id),[2]);assert.equal(h.docs.active,2);
+});

@@ -1,4 +1,4 @@
-# SkyLab — 0.2
+# SkyLab — 0.3
 
 Primeira versão utilizável, local, do fluxo de missões do SkyLab para helicópteros. O cálculo e a validação são feitos em Rust; a interface usa uma janela Windows própria e opera localmente. Não utiliza nem executa o programa antigo.
 
@@ -16,9 +16,17 @@ Esta é uma versão de testes; o rodapé de todas as telas informa o contato Raf
 
 As ferramentas de geração ficam na barra superior e aparecem ao selecionar um polígono no mapa ou nas camadas. A prévia e a geração usam somente esse polígono. A edição (Selecionar, Cortar, Caneta e Mover) também fica na faixa superior. Importar está no menu SkyLab, na tela vazia e no menu do botão direito do mapa.
 
-A caneta cria exclusivamente polígonos: clique para pontos retos, clique e arraste para alças Bézier, clique no primeiro ponto ou pressione Enter para fechar. Shift + clique no contorno selecionado insere um ponto sem alterar a curva; Selecionar permite mover pontos e alças. Alt move uma alça separadamente. Escape cancela o traçado; Ctrl+Z/Ctrl+Y percorrem seus pontos enquanto ele ainda está em desenho. Depois de fechado, o polígono e suas edições participam do histórico normal.
+A caneta (P, configurável em Ajuda > Atalhos / F1) cria exclusivamente polígonos: clique para pontos retos, clique e arraste para alças Bézier, clique no primeiro ponto ou pressione Enter para fechar. Shift + clique no contorno selecionado insere um ponto sem alterar a curva; Selecionar permite mover pontos e alças. Alt move uma alça separadamente. Escape cancela o traçado; Ctrl+Z/Ctrl+Y percorrem seus pontos enquanto ele ainda está em desenho. Depois de fechado, o polígono e suas edições participam do histórico normal.
 
 Curvas são preservadas no projeto JSON. Os cálculos usam um contorno com desvio de até 0,1 m e respeitam os limites de vértices; autointerseções são recusadas. Reprojetar converte a curva em vértices para preservar seu contorno transformado e registra uma nota. KML exporta o contorno e os furos, sem alças editáveis.
+
+## Bloco ativo e seleção
+
+O painel Linhas da missão mostra somente o bloco ativo, indicado acima da lista. Selecione outro polígono no mapa ou nas camadas para trocar de bloco; selecionar suas linhas mantém esse contexto. Clicar no título de uma camada mostra as linhas daquela origem. Linhas importadas são associadas ao polígono com maior extensão efetivamente contida, considerando furos; empates usam o primeiro polígono. Linhas fora de todos os polígonos continuam acessíveis pela camada de origem. Os dados completos continuam no mapa e no projeto.
+
+Ctrl + clique adiciona ou retira linhas individuais; Shift seleciona um intervalo. No botão direito, Renomear linhas permite definir prefixo, primeiro número, incremento e quantidade mínima de dígitos, com prévia e ordem do painel. Somente as linhas selecionadas são alteradas; Ctrl+Z desfaz a operação. Nomes incompatíveis com MIS ou duplicados na mesma camada são recusados.
+
+Ajuda e Sobre ocupam sempre o fim do menu SkyLab. O Sobre inclui Jørgen Nissen e volta a usar a logo em fundo azul. Os painéis não têm numeração. O botão de fechar aba volta a funcionar após operações; salvamento cancelado mantém a aba aberta com aviso.
 
 ## Camadas e edição
 
@@ -36,7 +44,7 @@ A opção Google Satellite XYZ utiliza a mesma conexão do QuickMapServices/QGIS
 
 ## Instalar e abrir
 
-Obtenha **SkyTEM-SkyLab-Setup-0.2-r3.exe** na [Release 0.2](https://github.com/JDantanna/SkyLab/releases/tag/v0.2-r3) e execute o instalador. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
+Obtenha **SkyTEM-SkyLab-Setup-0.3-r1.exe** na [Release 0.2](https://github.com/JDantanna/SkyLab/releases/tag/v0.3-r1) e execute o instalador. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
 
 Abra **SkyLab** pelo menu Iniciar ou pelo atalho. A janela Windows usa WebView2 e controles integrados ao cabeçalho azul, sem a moldura do navegador. A versão exibida é **0.2** (0.2.0 no pacote Rust). Antes de qualquer avanço de versão, será solicitada uma decisão explícita do usuário.
 

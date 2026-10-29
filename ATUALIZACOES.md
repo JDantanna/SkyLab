@@ -2,7 +2,7 @@
 
 O símbolo de atualização consulta as Releases estáveis de [JDantanna/SkyLab](https://github.com/JDantanna/SkyLab/releases). Quando houver uma compilação posterior, **Update and restart** baixa o pacote do aplicativo, verifica SHA256 e identidade, salva a sessão, encerra, substitui o executável e reinicia. Não abre navegador nem outro instalador. Não há consulta periódica nem telemetria.
 
-A versão aprovada permanece **0.2**. BUILD_REVISION identifica correções da mesma versão; avançar para 0.3 requer aprovação explícita. Publicações são imutáveis, identificadas por v0.2-r3, por exemplo.
+A versão aprovada é **0.3**. BUILD_REVISION identifica correções da mesma versão; avançar para 0.4 requer aprovação explícita. Publicações são imutáveis, identificadas por v0.3-r1, por exemplo.
 
 **Instalações 0.1, revisão interna 2 ou anteriores, precisam executar o instalador uma vez.** Elas ainda possuem o mecanismo antigo; o novo comportamento passa a valer após essa instalação.
 
