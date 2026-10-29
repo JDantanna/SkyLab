@@ -36,6 +36,8 @@ pub struct Polygon {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Line {
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub hidden: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layer: Option<u32>,
     pub name: String,
@@ -270,7 +272,7 @@ impl Project {
         self.validate_with_lines(&self.lines)
     }
     fn validate_with_lines(&self, lines: &[Line]) -> Result<()> {
-        if ![1, 2, 3, 4].contains(&self.version)
+        if ![1, 2, 3, 4, 5].contains(&self.version)
             || (self.crs.authority.is_some() && self.version < 2)
         {
             return Err("Versão de projeto não suportada.".into());
@@ -366,6 +368,7 @@ pub fn import_mis(text: &str, crs: Crs) -> Result<Project> {
                 p.lines.push(l)
             }
             current = Some(Line {
+                hidden: false,
                 layer: None,
                 name: s.into(),
                 points: vec![],
@@ -478,6 +481,7 @@ pub fn import_kml(text: &str, crs: Crs) -> Result<Project> {
             }
             used_names.insert(nm.clone());
             p.lines.push(Line {
+                hidden: false,
                 layer: None,
                 name: nm,
                 points: coords(*n, &p.crs)?,
@@ -628,6 +632,7 @@ pub fn generate(p: &Project, s: &Settings) -> Result<Vec<Line>> {
         }
         let point = |u: f64| [along[0] * u + across[0] * v, along[1] * u + across[1] * v];
         let l = Line {
+            hidden: false,
             layer: None,
             name: String::new(),
             points: vec![point(umin - 1.), point(umax + 1.)],
@@ -642,6 +647,7 @@ pub fn generate(p: &Project, s: &Settings) -> Result<Vec<Line>> {
                 )
                 .ok_or("Numeração excedida")?;
             let mut line = Line {
+                hidden: false,
                 layer: None,
                 name: format!("{}{number:06}", s.prefix),
                 points,
@@ -688,6 +694,7 @@ pub fn trim_line(l: &Line, start: f64, end: f64) -> Result<Line> {
         }
     }
     Ok(Line {
+        hidden: l.hidden,
         layer: l.layer,
         name: l.name.clone(),
         points: pts,

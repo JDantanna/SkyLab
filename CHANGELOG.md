@@ -1,5 +1,16 @@
 # Histórico de versões
 
+## 0.3 — hierarquia, visibilidade e geração modular (revisão interna 2)
+
+- Botões de exportação geral e de seleção MIS no rodapé de Linhas da missão.
+- Grupos aninhados com arrasto direto, reordenação, retorno à raiz e renomeação; proveniência e vértices preservados.
+- Olhos para grupos, arquivos e linhas; visibilidade herdada, salva em JSON formato 5, com desfazer. Geometria oculta não participa da seleção no mapa nem do corte manual.
+- Expansão das camadas deixa de reconstruir a árvore durante o clique.
+- Geração em painel modular flutuante junto ao polígono, com campos de numeração abertos e dimensões verificadas em português.
+- Cursores próprios para cada ferramenta; prévia violeta ao criar outro conjunto sobre linhas existentes.
+- Validação de grupos recusa ciclos, pais inválidos e profundidade excessiva; arquivos antigos continuam legíveis.
+
+
 ## 0.3 — seleção, blocos e acabamento (revisão interna 1)
 
 - Caneta com ícone de pena e atalho P configurável no painel F1.

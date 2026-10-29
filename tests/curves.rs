@@ -143,3 +143,16 @@ fn curve_layer_exports_preserve_editability_in_json_and_include_its_shape_in_kml
         assert!(distance_to_ring(*point, &p.polygons[0].outer) < 0.01);
     }
 }
+
+#[test]
+fn drawing_keeps_hierarchy_schema_and_uses_a_visible_layer() {
+    let mut p = curves::upsert(&empty(), None, anchors()).unwrap();
+    p.version = 5;
+    p.layers[0].hidden = true;
+    let next = curves::upsert(&p, None, anchors()).unwrap();
+    assert_eq!(next.version, 5);
+    assert_eq!(next.layers.len(), 2);
+    assert_ne!(next.polygons[0].layer, next.polygons[1].layer);
+    assert!(layers::visible(&next, next.polygons[1].layer));
+    next.validate().unwrap();
+}

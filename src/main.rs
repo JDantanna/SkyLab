@@ -255,6 +255,8 @@ fn process(r: Request) -> Result<Value> {
                 line.layer = Some(id);
             }
             p.layers.push(layers::Layer {
+                parent: None,
+                hidden: false,
                 id,
                 name: "Generated lines".into(),
                 source: "Generated".into(),
@@ -271,7 +273,8 @@ fn process(r: Request) -> Result<Value> {
                     .filter_map(|l| l.layer)
                     .chain(p.polygons.iter().filter_map(|g| g.layer))
                     .collect();
-                p.layers.retain(|l| used.contains(&l.id));
+                p.layers
+                    .retain(|l| used.contains(&l.id) || l.source == "Group");
             }
         }
         "trim" => {
@@ -297,6 +300,7 @@ fn process(r: Request) -> Result<Value> {
                 let count = pieces.len();
                 for (j, points) in pieces.into_iter().enumerate() {
                     out.push(Line {
+                        hidden: l.hidden,
                         layer: l.layer,
                         name: if count > 1 {
                             format!("{}_{}", l.name, j + 1)

@@ -14,11 +14,21 @@ Esta é uma versão de testes; o rodapé de todas as telas informa o contato Raf
 
 ## Polígonos e barra contextual
 
-As ferramentas de geração ficam na barra superior e aparecem ao selecionar um polígono no mapa ou nas camadas. A prévia e a geração usam somente esse polígono. A edição (Selecionar, Cortar, Caneta e Mover) também fica na faixa superior. Importar está no menu SkyLab, na tela vazia e no menu do botão direito do mapa.
+As ferramentas de geração aparecem em um painel modular flutuante junto ao polígono selecionado no mapa ou nas camadas. Todos os campos ficam expostos, com opção de mover, encaixar e redimensionar o painel. A prévia e a geração usam somente esse polígono. A edição (Selecionar, Cortar, Caneta e Mover) também fica na faixa superior. Importar está no menu SkyLab, na tela vazia e no menu do botão direito do mapa.
 
 A caneta (P, configurável em Ajuda > Atalhos / F1) cria exclusivamente polígonos: clique para pontos retos, clique e arraste para alças Bézier, clique no primeiro ponto ou pressione Enter para fechar. Shift + clique no contorno selecionado insere um ponto sem alterar a curva; Selecionar permite mover pontos e alças. Alt move uma alça separadamente. Escape cancela o traçado; Ctrl+Z/Ctrl+Y percorrem seus pontos enquanto ele ainda está em desenho. Depois de fechado, o polígono e suas edições participam do histórico normal.
 
 Curvas são preservadas no projeto JSON. Os cálculos usam um contorno com desvio de até 0,1 m e respeitam os limites de vértices; autointerseções são recusadas. Reprojetar converte a curva em vértices para preservar seu contorno transformado e registra uma nota. KML exporta o contorno e os furos, sem alças editáveis.
+
+## Organização e visibilidade das linhas
+
+No painel Linhas da missão, Novo grupo cria uma pasta; arraste títulos de arquivos e grupos para dentro de outro grupo ou para Mover para a raiz. As bordas superior/inferior permitem reordenar os itens. Grupos podem ser renomeados com duplo clique. A hierarquia organiza os arquivos sem alterar suas origens nem coordenadas.
+
+O olho controla a visualização de um arquivo, grupo ou linha e considera a visibilidade dos grupos pais. Ocultar não exclui dados e não reduz a exportação geral. Grupos e visibilidade ficam no projeto JSON formato 5, que requer esta revisão ou posterior para abertura; formatos 1 a 4 continuam legíveis. O histórico também desfaz organização e visibilidade.
+
+O rodapé do painel tem Exportar (todas as linhas do projeto) e Exportar seleção · MIS (somente a seleção). A lista continua respeitando o bloco ativo; títulos de outros arquivos ficam disponíveis para organização, sem mostrar linhas de outro bloco.
+
+Seleção, corte, caneta e mão têm cursores próprios. Ao pré-visualizar uma nova malha sobre linhas existentes, a prévia é violeta; os dados existentes continuam azuis e a seleção laranja.
 
 ## Bloco ativo e seleção
 
@@ -44,7 +54,7 @@ A opção Google Satellite XYZ utiliza a mesma conexão do QuickMapServices/QGIS
 
 ## Instalar e abrir
 
-Obtenha **SkyTEM-SkyLab-Setup-0.3-r1.exe** na [Release 0.2](https://github.com/JDantanna/SkyLab/releases/tag/v0.3-r1) e execute o instalador. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
+Obtenha **SkyTEM-SkyLab-Setup-0.3-r2.exe** na [Release 0.2](https://github.com/JDantanna/SkyLab/releases/tag/v0.3-r2) e execute o instalador. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
 
 Abra **SkyLab** pelo menu Iniciar ou pelo atalho. A janela Windows usa WebView2 e controles integrados ao cabeçalho azul, sem a moldura do navegador. A versão exibida é **0.2** (0.2.0 no pacote Rust). Antes de qualquer avanço de versão, será solicitada uma decisão explícita do usuário.
 

@@ -68,6 +68,10 @@ pub fn cut(project: &Project, stroke: &[Point]) -> Result<Project> {
     result.lines.clear();
     let mut names: HashSet<String> = project.lines.iter().map(|l| l.name.clone()).collect();
     for line in &project.lines {
+        if line.hidden || !crate::layers::visible(project, line.layer) {
+            result.lines.push(line.clone());
+            continue;
+        }
         let total = length(line);
         let mut cuts = vec![0., total];
         let mut cumulative = 0.;

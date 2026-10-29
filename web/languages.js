@@ -43,6 +43,10 @@ translations.push(
 ['Aguarde a operação atual para fechar o projeto.','Wait for the current operation to finish before closing the project.','Vent på, at den aktuelle handling afsluttes, før projektet lukkes.'],['O projeto continua aberto porque o salvamento não foi concluído.','The project remains open because saving did not finish.','Projektet er stadig åbent, fordi lagringen ikke blev gennemført.']
 );
 translations.push(['Arraste para selecionar. Ctrl alterna linhas; Shift seleciona um intervalo.','Drag to select. Ctrl toggles lines; Shift selects a range.','Træk for at markere. Ctrl skifter linjer; Shift vælger et interval.']);
+translations.push(
+['Grupo','Group','Gruppe'],['Novo grupo','New group','Ny gruppe'],['＋ Novo grupo','＋ New group','＋ Ny gruppe'],['Renomear grupo','Rename group','Omdøb gruppe'],['Mover para a raiz','Move to root','Flyt til rod'],['Nome','Name','Navn'],['Aplicar','Apply','Anvend'],['Mostrar','Show','Vis'],['Ocultar','Hide','Skjul'],['Arquivo','File','Fil'],['Hierarquia inválida.','Invalid hierarchy.','Ugyldigt hierarki.'],['Hierarquia atualizada.','Hierarchy updated.','Hierarki opdateret.'],['Visibilidade atualizada.','Visibility updated.','Synlighed opdateret.'],['Nome de grupo inválido.','Invalid group name.','Ugyldigt gruppenavn.'],['Arraste arquivos ou grupos para cá.','Drop files or groups here.','Slip filer eller grupper her.'],['Clique duas vezes para renomear o grupo.','Double-click to rename the group.','Dobbeltklik for at omdøbe gruppen.'],['Exportar todas as linhas do projeto.','Export all project lines.','Eksportér alle projektlinjer.'],['Gerar linhas','Generate lines','Generér linjer']
+);
+translations.push(['Nenhuma linha neste bloco.','No lines in this block.','Ingen linjer i denne blok.']);
 const translationIndex=new Map();for(const row of translations)for(const text of row)translationIndex.set(text,row);
 function tr(text){const row=translationIndex.get(text);return row?row[window.skyLocale==='pt-BR'?0:window.skyLocale==='da'?2:1]:text;}
 window.tr=tr;

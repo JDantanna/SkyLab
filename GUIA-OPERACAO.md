@@ -129,3 +129,9 @@ Clique no botão de importação da área vazia, use Abrir no menu SkyLab ou Adi
 ## Seleção e renomeação em lote
 
 O painel Linhas da missão acompanha o bloco ativo indicado acima da lista. Selecione um polígono para trocar de bloco ou o título de uma camada para trabalhar naquela origem. Ctrl + clique alterna linhas individuais, Shift seleciona intervalos e botão direito > Renomear linhas abre a sequência com prévia. P ativa a Caneta; F1 permite trocar o atalho.
+
+## Hierarquia e visualização (0.3, revisão 2)
+
+No painel Linhas da missão, crie grupos e arraste os títulos dos arquivos ou pastas para dentro de um grupo. Arraste para Mover para a raiz para retirar; arraste às bordas de um título para reordenar. Duplo clique renomeia a pasta. O olho esconde ou exibe grupos, arquivos e linhas, sem apagar dados. Exporte tudo ou a seleção nos botões do rodapé.
+
+Ao selecionar um polígono, a geração abre em um painel flutuante modular junto dele. Os campos ficam expostos; a nova prévia é violeta quando já existem linhas. A hierarquia e os olhos são preservados no projeto JSON formato 5.

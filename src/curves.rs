@@ -126,7 +126,7 @@ fn upsert_validated(
 ) -> Result<Project> {
     let outer = flatten(&anchors)?;
     let mut next = project.clone();
-    next.version = 4;
+    next.version = next.version.max(4);
     if let Some(index) = index {
         let polygon = next
             .polygons
@@ -139,6 +139,8 @@ fn upsert_validated(
         if next.layers.is_empty() && (!next.lines.is_empty() || !next.polygons.is_empty()) {
             let id = layers::next_id(&next)?;
             next.layers.push(layers::Layer {
+                parent: None,
+                hidden: false,
                 id,
                 name: "Imported geometry".into(),
                 source: "Project".into(),
@@ -151,11 +153,17 @@ fn upsert_validated(
                 polygon.layer = Some(id);
             }
         }
-        let id = if let Some(layer) = next.layers.iter().find(|l| l.source == "Drawing") {
+        let id = if let Some(layer) = next
+            .layers
+            .iter()
+            .find(|l| l.source == "Drawing" && layers::visible(&next, Some(l.id)))
+        {
             layer.id
         } else {
             let id = layers::next_id(&next)?;
             next.layers.push(layers::Layer {
+                parent: None,
+                hidden: false,
                 id,
                 name: "Drawn polygons".into(),
                 source: "Drawing".into(),

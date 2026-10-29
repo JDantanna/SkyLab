@@ -27,6 +27,7 @@ fn project(g: Polygon) -> Project {
 }
 fn line(points: Vec<Point>) -> Line {
     Line {
+        hidden: false,
         layer: None,
         name: "L100100".into(),
         points,
@@ -279,6 +280,7 @@ fn duplicate_and_unsafe_names_rejected() {
     for name in ["L1\nINJECT", "a b", "área", "123", "NaN", ""] {
         let mut p = Project::empty(crs());
         p.lines.push(Line {
+            hidden: false,
             layer: None,
             name: name.into(),
             points: vec![pt(0., 0.), pt(10., 10.)],

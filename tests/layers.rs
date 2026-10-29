@@ -12,18 +12,24 @@ fn fixture() -> Project {
     p.version = 3;
     p.layers = vec![
         Layer {
+            parent: None,
+            hidden: false,
             id: 1,
             name: "flight.mis".into(),
             source: "MIS".into(),
             warnings: vec![],
         },
         Layer {
+            parent: None,
+            hidden: false,
             id: 2,
             name: "other.mis".into(),
             source: "MIS".into(),
             warnings: vec![],
         },
         Layer {
+            parent: None,
+            hidden: false,
             id: 3,
             name: "area.kmz".into(),
             source: "KMZ".into(),
@@ -32,6 +38,7 @@ fn fixture() -> Project {
     ];
     p.lines = vec![
         Line {
+            hidden: false,
             layer: Some(1),
             name: "L100".into(),
             points: vec![
@@ -41,6 +48,7 @@ fn fixture() -> Project {
             ],
         },
         Line {
+            hidden: false,
             layer: Some(2),
             name: "L100".into(),
             points: vec![[500000., 7800200.], [500100., 7800200.]],
@@ -108,4 +116,68 @@ fn rejects_dangling_layer_ids_and_duplicate_layer_definitions_and_reads_legacy_p
     legacy.validate().unwrap();
     assert!(legacy.layers.is_empty());
     assert_eq!(legacy.lines[0].layer, None);
+}
+
+#[test]
+fn folders_validate_cycles_and_export_only_descendants_without_losing_metadata() {
+    let mut p = fixture();
+    p.version = 5;
+    p.layers.push(Layer {
+        id: 10,
+        name: "Survey".into(),
+        source: "Group".into(),
+        parent: None,
+        hidden: false,
+        warnings: vec![],
+    });
+    p.layers.push(Layer {
+        id: 11,
+        name: "Subset".into(),
+        source: "Group".into(),
+        parent: Some(10),
+        hidden: false,
+        warnings: vec![],
+    });
+    p.layers[0].parent = Some(11);
+    p.lines[0].hidden = true;
+    p.validate().unwrap();
+    let saved = serde_json::to_string(&p).unwrap();
+    let roundtrip: Project = serde_json::from_str(&saved).unwrap();
+    assert!(roundtrip.lines[0].hidden);
+    assert_eq!(roundtrip.layers[0].parent, Some(11));
+    let subset = layers::subset(&p, 10).unwrap();
+    assert_eq!(subset.lines.len(), 1);
+    assert_eq!(subset.layers.len(), 3);
+    assert_eq!(subset.version, 5);
+    subset.validate().unwrap();
+    assert!(export_mis(&subset).unwrap().contains("L100"));
+    let mut bad = p.clone();
+    bad.layers[3].parent = Some(11);
+    assert!(bad.validate().is_err());
+    let mut bad = p.clone();
+    bad.layers[0].parent = Some(2);
+    assert!(bad.validate().is_err());
+    let mut bad = p.clone();
+    bad.layers[0].parent = Some(999);
+    assert!(bad.validate().is_err());
+    let mut bad = p.clone();
+    bad.version = 4;
+    assert!(bad.validate().is_err());
+    let mut bad = p.clone();
+    bad.lines[0].layer = Some(10);
+    assert!(bad.validate().is_err());
+}
+#[test]
+fn hidden_lines_are_not_cut_and_group_visibility_is_inherited() {
+    let mut p = fixture();
+    p.version = 5;
+    p.layers[0].hidden = true;
+    assert!(!layers::visible(&p, Some(1)));
+    let cut = editing::cut(&p, &[[500050., 7799900.], [500050., 7800300.]]).unwrap();
+    assert_eq!(cut.lines.iter().filter(|l| l.layer == Some(1)).count(), 1);
+    assert_eq!(cut.lines[0].points, p.lines[0].points);
+    p.layers[0].hidden = false;
+    p.lines[0].hidden = true;
+    let cut = editing::cut(&p, &[[500050., 7799900.], [500050., 7800300.]]).unwrap();
+    assert_eq!(cut.lines[0].points, p.lines[0].points);
 }
