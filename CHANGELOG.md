@@ -1,5 +1,15 @@
 # Histórico de versões
 
+## 0.4 — abertura, divisão e painéis (revisão interna 2)
+
+- Importação entre zonas/hemisférios incompatíveis preserva o projeto anterior em sua aba e abre o arquivo no sistema confirmado pelo operador; limite de abas recebe mensagem explícita.
+- Erros de abertura aparecem também na tela inicial; arrastar arquivos funciona no centro do workspace e no host nativo.
+- Menu de linha abre Cortar por distância, inclusive quando o painel estava fechado ou recolhido.
+- Divisão calculada no Rust no limite escolhido, preservando vértices, compartilhando o ponto de divisão e evitando nomes repetidos; ambas as partes ficam selecionadas e têm desfazer.
+- Limite de corte editado atualiza a distância de divisão; redesenhos mantêm os valores.
+- Setas de cabeçalho somente recolhem/expandem; painéis recebem símbolos vetoriais próprios. Reposicionamento continua por arrasto.
+
+
 ## 0.4 — Project layers, desempenho e projetos nativos (revisão interna 1)
 
 - Project layers compartilha grupos, arrasto e olhos com Mission lines; renomear por menu ou duplo clique no nome e excluir com desfazer.

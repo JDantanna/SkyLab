@@ -273,4 +273,39 @@ fn local_server_serves_ui_and_validates_api() {
         assert_eq!(a.name, b.name);
         assert_eq!(a.points, b.points);
     }
+    // Split at cumulative distance, including an interior vertex and colliding suffixes.
+    let mission = serde_json::json!({"version":1,"crs":{"zone":23,"south":true},"layers":[],"polygons":[],"warnings":[],"lines":[{"name":"L1","points":[[500000,7800000],[500030,7800000],[500030,7800040],[500100,7800040]]},{"name":"L1_A","points":[[500000,7800100],[500100,7800100]]}]});
+    for at in [30., 50.] {
+        let reply = call(
+            port,
+            "POST",
+            "/api",
+            &serde_json::json!({"op":"split","project":mission,"index":0,"start":at}).to_string(),
+            None,
+        );
+        let reply: serde_json::Value =
+            serde_json::from_str(reply.split_once("\r\n\r\n").unwrap().1).unwrap();
+        assert_eq!(reply["ok"], true, "{reply}");
+        let result: skylab_rust::Project = serde_json::from_value(reply["data"].clone()).unwrap();
+        assert_eq!(result.lines.len(), 3);
+        let (a, b) = (&result.lines[0], &result.lines[1]);
+        assert_eq!(a.points.last(), b.points.first());
+        assert!((skylab_rust::length(a) - at).abs() < 1e-7);
+        assert!((skylab_rust::length(b) - (140. - at)).abs() < 1e-7);
+        assert_eq!(a.name, "L1_A2");
+        assert_eq!(b.name, "L1_B");
+        assert_eq!(b.points.last(), Some(&[500100., 7800040.]));
+    }
+    for at in [0., 140., -1.] {
+        let reply = call(
+            port,
+            "POST",
+            "/api",
+            &serde_json::json!({"op":"split","project":mission,"index":0,"start":at}).to_string(),
+            None,
+        );
+        let reply: serde_json::Value =
+            serde_json::from_str(reply.split_once("\r\n\r\n").unwrap().1).unwrap();
+        assert_eq!(reply["ok"], false);
+    }
 }

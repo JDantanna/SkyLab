@@ -287,6 +287,36 @@ fn process(r: Request) -> Result<Value> {
                     .retain(|l| used.contains(&l.id) || l.source == "Group");
             }
         }
+        "split" => {
+            let i = r.index.ok_or("Selecione uma linha")?;
+            let line = p.lines.get(i).ok_or("Linha inexistente")?;
+            let at = r.start.ok_or("Distância de divisão ausente")?;
+            let total = length(line);
+            if !at.is_finite() || at <= 0. || at >= total {
+                return Err("A distância de divisão precisa estar dentro da linha.".into());
+            }
+            let mut a = trim_line(line, 0., at)?;
+            let mut b = trim_line(line, at, total)?;
+            // MIS names must stay unique within their source layer and at most 64 bytes.
+            let stem = &line.name[..line.name.len().min(48)];
+            let mut names = std::collections::HashSet::new();
+            for (index, other) in p.lines.iter().enumerate() {
+                if index != i && other.layer == line.layer {
+                    names.insert(other.name.clone());
+                }
+            }
+            for (part, suffix) in [(&mut a, "A"), (&mut b, "B")] {
+                let mut name = format!("{stem}_{suffix}");
+                let mut n = 2;
+                while names.contains(&name) {
+                    name = format!("{stem}_{suffix}{n}");
+                    n += 1;
+                }
+                names.insert(name.clone());
+                part.name = name;
+            }
+            p.lines.splice(i..=i, [a, b]);
+        }
         "trim" => {
             let i = r.index.ok_or("Selecione uma linha")?;
             let l = p.lines.get(i).ok_or("Linha inexistente")?;
