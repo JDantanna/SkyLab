@@ -1,5 +1,12 @@
 # Histórico de versões
 
+## 0.4 — fechamento, título e abas (revisão interna 3)
+
+- Fechar projeto organiza Salvar e fechar (azul), Fechar sem salvar e Voltar em três botões alinhados que ocupam toda a largura.
+- Cabeçalho do workspace identifica Projeto e mostra o nome da aba ativa, com reticências e título completo ao passar o cursor. Nomes de projetos não são traduzidos.
+- Abas encostam no limite esquerdo e no cabeçalho, sem espaçamentos externos entre seus limites.
+
+
 ## 0.4 — abertura, divisão e painéis (revisão interna 2)
 
 - Importação entre zonas/hemisférios incompatíveis preserva o projeto anterior em sua aba e abre o arquivo no sistema confirmado pelo operador; limite de abas recebe mensagem explícita.
