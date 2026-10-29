@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.4 — revisão de código e otimização (revisão interna 4)
+
+- Hierarquia indexada por projeto imutável: filhos, visibilidade herdada e totais de grupos deixam de percorrer toda a geometria para cada camada.
+- Mission lines e Project layers reutilizam o índice e agregam contagens sem repetir filtros sobre todas as linhas.
+- Importação por arrasto centralizada, removendo manipuladores antigos; fallback inicial de lista e botão satélite sobrescritos foram simplificados.
+- Corte Rust não clona linhas para descartá-las logo em seguida e reutiliza a visibilidade por camada durante o corte.
+- Preservados formatos, validações geométricas, licenças, bibliotecas de projeção e interface institucional.
+
+
 ## 0.4 — fechamento, título e abas (revisão interna 3)
 
 - Fechar projeto organiza Salvar e fechar (azul), Fechar sem salvar e Voltar em três botões alinhados que ocupam toda a largura.

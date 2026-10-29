@@ -45,3 +45,11 @@ test('pointer drop routes nested files back to the root and ignores cancellation
  vm.runInContext('finishMissionDrag({pointerId:7,preventDefault(){}})',context);await new Promise(r=>setImmediate(r));assert.equal(updates[0].layers.find(l=>l.id===1).parent,null);assert.deepEqual(updates[0].lines,project.lines);
  updates=[];context.missionDrag=make();vm.runInContext('finishMissionDrag({pointerId:7,preventDefault(){}},true)',context);assert.equal(updates.length,0);
 });
+
+test('indexed hierarchy totals retain empty groups, nested counts and immutable visibility changes',()=>{
+ const project={version:5,layers:[{id:1,name:'Root',source:'Group'},{id:2,name:'Nested',source:'Group',parent:1},{id:3,name:'Lines',source:'MIS',parent:2},{id:4,name:'Empty',source:'Group',parent:1}],polygons:[],lines:[],warnings:[]};
+ assert.deepEqual(layers.children(project).map(l=>l.id),[1]);assert.deepEqual(layers.children(project,1).map(l=>l.id),[2,4]);
+ const counts=layers.totals(project,new Map([[3,20000],[4,0]]));assert.equal(counts.get(1),20000);assert.equal(counts.get(2),20000);assert.equal(counts.get(3),20000);assert.equal(counts.get(4),0);
+ assert.equal(layers.visible(project,3),true);const hidden=layers.toggle(project,'layer',1);assert.equal(layers.visible(hidden,3),false);assert.equal(layers.visible(project,3),true);
+ const moved=layers.move(hidden,3,null);assert.equal(layers.visible(moved,3),true);assert.deepEqual([...layers.descendants(moved,1)].sort(),[1,2,4]);assert.deepEqual([...layers.descendants(project,1)].sort(),[1,2,3,4]);
+});

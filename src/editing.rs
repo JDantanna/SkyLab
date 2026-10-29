@@ -64,11 +64,23 @@ pub fn cut(project: &Project, stroke: &[Point]) -> Result<Project> {
     }
     let box_all = bounds(stroke);
     let mut work = 0usize;
-    let mut result = project.clone();
-    result.lines.clear();
+    let mut result = Project {
+        name: project.name.clone(),
+        version: project.version,
+        crs: project.crs.clone(),
+        layers: project.layers.clone(),
+        polygons: project.polygons.clone(),
+        warnings: project.warnings.clone(),
+        lines: Vec::with_capacity(project.lines.len()),
+    };
+    let mut visibility = std::collections::HashMap::new();
     let mut names: HashSet<String> = project.lines.iter().map(|l| l.name.clone()).collect();
     for line in &project.lines {
-        if line.hidden || !crate::layers::visible(project, line.layer) {
+        if line.hidden
+            || !*visibility
+                .entry(line.layer)
+                .or_insert_with(|| crate::layers::visible(project, line.layer))
+        {
             result.lines.push(line.clone());
             continue;
         }

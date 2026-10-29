@@ -10,6 +10,5 @@ function openProjectFile(){if(!busy)$('file').click();}
 $('home-open').onclick=openProjectFile;$('open-file').onclick=openProjectFile;
 home.addEventListener('dragover',event=>{event.preventDefault();home.classList.add('drop-active');});
 home.addEventListener('dragleave',()=>home.classList.remove('drop-active'));
-home.addEventListener('drop',event=>{event.preventDefault();home.classList.remove('drop-active');if(!busy)action(()=>loadFile(event.dataTransfer.files[0]));});
 const beforeHomeTour=startTour;startTour=function(){if(!documents.current())newDocument();beforeHomeTour();};$('start-tour').onclick=startTour;
 renderTabs();
