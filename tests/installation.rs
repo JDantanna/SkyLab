@@ -245,6 +245,14 @@ fn legacy_update_migrates_mis_registration_and_uninstaller_without_touching_user
     let association: serde_json::Value =
         serde_json::from_slice(&fs::read(o.root.join("test-association.json")).unwrap()).unwrap();
     assert_eq!(association["Extension"], ".mis");
+    assert_eq!(association["ProjectExtension"], ".skylab");
+    assert_eq!(association["ProjectProgId"], "SkyTEM.SkyLab.Project");
+    assert!(
+        association["ProjectIcon"]
+            .as_str()
+            .unwrap()
+            .ends_with("SkyLab-Rust.exe\",0")
+    );
     assert!(
         association["Command"]
             .as_str()

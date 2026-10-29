@@ -36,3 +36,17 @@ test('cancelled save keeps the tab open and visibly explains why',async()=>{
 test('successful save closes the intended tab and restores the remaining active document',async()=>{
  const h=closeHarness();h.$('save').onclick=async()=>{h.context.dirty=false;};h.run('requestCloseDocument(1)');await h.$('save-project-close').onclick();assert.deepEqual(h.docs.items.map(d=>d.id),[2]);assert.equal(h.docs.active,2);
 });
+
+test('responsive panel placement scales with the viewport and returns without accumulated drift',()=>{
+ const {fitPanel}=require('../web/session.js'),from={width:1000,height:600},to={width:1600,height:960},rect={x:600,y:100,width:320,height:400};
+ const large=fitPanel(rect,from,to);assert.equal(large.width,512);assert.equal(large.height,640);assert(large.x>rect.x);assert(large.y>rect.y);
+ assert.deepEqual(fitPanel(rect,from,from),rect);
+ const small=fitPanel({x:999,y:599,width:900,height:800},from,{width:800,height:500});assert(small.x>=0&&small.y>=0);assert(small.x+small.width<=800);assert(small.y+small.height<=500);
+});
+
+test('generation preview sends only its selected polygon, never the loaded flight vertices',async()=>{
+ const fs=require('node:fs'),vm=require('node:vm'),source=fs.readFileSync(require.resolve('../web/studio.js'),'utf8'),start=source.indexOf('async function calculatePreview('),end=source.indexOf('const previewQueue=',start);let sent;
+ const ctx=vm.createContext({api:async(op,body)=>{sent={op,...body};return{...body.project,polygons:[],lines:[{name:'L100',points:[[1,1],[2,2]]}]};}});vm.runInContext(source.slice(start,end),ctx);
+ const polygon={outer:[[1,1],[2,1],[2,2],[1,1]],holes:[],layer:7,name:'Source'},p={version:6,name:'Saved project',crs:{zone:23,south:true},layers:[{id:7}],polygons:[polygon,polygon],lines:Array.from({length:500},()=>({points:Array(50).fill([500000,7800000])}))};
+ await ctx.calculatePreview({mode:'generate',project:p,polygon:1,settings:{spacing:100}});assert.equal(sent.op,'generate-preview');assert.equal(sent.project.lines.length,0);assert.equal(sent.project.polygons.length,1);assert.equal(sent.project.polygons[0].name,undefined);assert(JSON.stringify(sent).length<JSON.stringify(p).length/100);assert.equal(p.lines.length,500);
+});

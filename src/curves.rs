@@ -172,6 +172,8 @@ fn upsert_validated(
             id
         };
         next.polygons.push(Polygon {
+            name: None,
+            hidden: false,
             layer: Some(id),
             outer,
             holes: vec![],

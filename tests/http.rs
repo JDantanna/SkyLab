@@ -249,4 +249,28 @@ fn local_server_serves_ui_and_validates_api() {
             .iter()
             .any(|text| text.as_str().unwrap_or("").contains("curves"))
     );
+    let surface = serde_json::json!({"version":1,"crs":{"zone":23,"south":true},"layers":[],"lines":[],"warnings":[],"polygons":[{"outer":[[500000,7800000],[501000,7800000],[501000,7801000],[500000,7801000],[500000,7800000]],"holes":[]}]});
+    let settings = serde_json::json!({"spacing":100,"angle":120,"offset":50,"min_length":1,"prefix":"L","first":100100,"increment":100,"alternate":false});
+    let fetch_project = |op: &str| {
+        let reply = call(
+            port,
+            "POST",
+            "/api",
+            &serde_json::json!({"op":op,"project":surface,"settings":settings}).to_string(),
+            None,
+        );
+        let v: serde_json::Value =
+            serde_json::from_str(reply.split("\r\n\r\n").nth(1).unwrap()).unwrap();
+        assert_eq!(v["ok"], true);
+        serde_json::from_value::<skylab_rust::Project>(v["data"].clone()).unwrap()
+    };
+    let preview = fetch_project("generate-preview");
+    let committed = fetch_project("generate");
+    assert!(preview.polygons.is_empty());
+    assert!(preview.layers.is_empty());
+    assert_eq!(preview.lines.len(), committed.lines.len());
+    for (a, b) in preview.lines.iter().zip(&committed.lines) {
+        assert_eq!(a.name, b.name);
+        assert_eq!(a.points, b.points);
+    }
 }

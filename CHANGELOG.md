@@ -1,5 +1,15 @@
 # Histórico de versões
 
+## 0.4 — Project layers, desempenho e projetos nativos (revisão interna 1)
+
+- Project layers compartilha grupos, arrasto e olhos com Mission lines; renomear por menu ou duplo clique no nome e excluir com desfazer.
+- Nomes de projeto e polígonos e visibilidade individual dos polígonos persistem no formato 6.
+- Projetos salvos como `.skylab`, com filtro próprio, extensão e ícone registrados por usuário; JSON antigo continua abrindo. Atualização migra o desinstalador para remover também a nova associação.
+- Prévia de geração transporta somente o polígono ativo, atualiza apenas a camada temporária e evita uma validação topológica repetida.
+- Painéis acompanham maximização/restauração proporcionalmente, sem acumular deslocamento; referência do tamanho da janela é salva com o layout.
+- Seção Validation removida de Help.
+
+
 ## 0.3 — hierarquia, visibilidade e geração modular (revisão interna 2)
 
 - Botões de exportação geral e de seleção MIS no rodapé de Linhas da missão.

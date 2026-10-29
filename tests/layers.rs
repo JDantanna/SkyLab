@@ -55,6 +55,8 @@ fn fixture() -> Project {
         },
     ];
     p.polygons = vec![Polygon {
+        name: None,
+        hidden: false,
         curve: None,
         layer: Some(3),
         outer: vec![
@@ -180,4 +182,22 @@ fn hidden_lines_are_not_cut_and_group_visibility_is_inherited() {
     p.lines[0].hidden = true;
     let cut = editing::cut(&p, &[[500050., 7799900.], [500050., 7800300.]]).unwrap();
     assert_eq!(cut.lines[0].points, p.lines[0].points);
+}
+
+#[test]
+fn named_project_and_hidden_named_polygons_roundtrip_and_require_new_schema() {
+    let mut p = fixture();
+    p.version = 6;
+    p.name = Some("Synthetic project".into());
+    p.polygons[0].name = Some("Boundary A".into());
+    p.polygons[0].hidden = true;
+    p.validate().unwrap();
+    let saved = serde_json::to_string(&p).unwrap();
+    let restored: Project = serde_json::from_str(&saved).unwrap();
+    assert_eq!(restored.name, p.name);
+    assert_eq!(restored.polygons[0].name, p.polygons[0].name);
+    assert!(restored.polygons[0].hidden);
+    assert_eq!(layers::subset(&restored, 3).unwrap().name, p.name);
+    p.version = 5;
+    assert!(p.validate().is_err());
 }

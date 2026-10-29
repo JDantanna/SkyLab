@@ -209,7 +209,9 @@ internal sealed class ShellWindow : Form {
                 else {
                     using(var dialog=new SaveFileDialog()) {
                         dialog.FileName=Path.GetFileName(ev.ResultFilePath);dialog.Title="SkyLab — Save file";
-                        dialog.Filter="SkyLab files|*.json;*.mis;*.kml|All files|*.*";
+                        bool projectFile=String.Equals(Path.GetExtension(dialog.FileName),".skylab",StringComparison.OrdinalIgnoreCase);
+                        dialog.Filter=projectFile?"SkyLab project|*.skylab|All files|*.*":"SkyLab files|*.mis;*.kml;*.json|All files|*.*";
+                        dialog.DefaultExt=projectFile?"skylab":Path.GetExtension(dialog.FileName).TrimStart('.');dialog.AddExtension=true;
                         if(dialog.ShowDialog(this)!=DialogResult.OK){ev.Cancel=true;ev.Handled=true;browser.CoreWebView2.PostWebMessageAsString("save-cancelled");return;}
                         ev.ResultFilePath=dialog.FileName;
                     }
@@ -242,7 +244,7 @@ internal sealed class ShellWindow : Form {
     private void Message(object sender,CoreWebView2WebMessageReceivedEventArgs e) {
         Uri source;if(!Uri.TryCreate(e.Source,UriKind.Absolute,out source)||source.GetLeftPart(UriPartial.Authority)!=target.GetLeftPart(UriPartial.Authority))return;
         string command;try{command=e.TryGetWebMessageAsString();}catch{return;}
-        if(command=="open-files"){using(var dialog=new OpenFileDialog()){dialog.Title="SkyLab — Open file";dialog.Filter="SkyLab files|*.kml;*.kmz;*.mis;*.mission;*.json";dialog.Multiselect=true;if(dialog.ShowDialog(this)==DialogResult.OK)QueueFiles(dialog.FileNames);}return;}
+        if(command=="open-files"){using(var dialog=new OpenFileDialog()){dialog.Title="SkyLab — Open file";dialog.Filter="SkyLab files|*.kml;*.kmz;*.mis;*.mission;*.skylab;*.json";dialog.Multiselect=true;if(dialog.ShowDialog(this)==DialogResult.OK)QueueFiles(dialog.FileNames);}return;}
         if(command=="dropped-files"){var paths=new System.Collections.Generic.List<string>();foreach(var item in e.AdditionalObjects){var file=item as CoreWebView2File;if(file!=null)paths.Add(file.Path);}QueueFiles(paths.ToArray());return;}
         if(command=="startup-painted"){pagePainted=true;if(ready)RevealPage();return;}
         if(command.StartsWith("caption:")){var parts=command.Split(':');double height,scale;if(parts.Length==3&&Double.TryParse(parts[1],System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out height)&&Double.TryParse(parts[2],System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out scale)&&height>=40&&height<=100&&scale>=0.5&&scale<=4)LayoutCaption(height,scale);return;}

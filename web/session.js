@@ -15,5 +15,6 @@
   cancel(){this.revision++;this.pending=null;clearTimeout(this.timer);this.timer=null;}
   async flush(){this.timer=null;if(this.running||!this.pending)return;const job=this.pending;this.pending=null;this.running=true;try{const result=await this.run(job.value);if(job.revision===this.revision)this.accept(result,job.value);}catch(error){if(job.revision===this.revision)this.reject(error,job.value);}finally{this.running=false;if(this.pending)this.timer=setTimeout(()=>this.flush(),this.delay);}}
  }
- const api={Documents,LatestPreview};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SkyLabSession=api;
+ function fitPanel(rect,from,to){const sx=to.width/from.width,sy=to.height/from.height,width=Math.min(Math.max(240,to.width-16),Math.max(240,rect.width*sx)),height=Math.min(Math.max(80,to.height-16),Math.max(80,rect.height*sy)),x=(rect.x/Math.max(1,from.width-rect.width))*Math.max(0,to.width-width),y=(rect.y/Math.max(1,from.height-rect.height))*Math.max(0,to.height-height);return {width,height,x:Math.max(0,Math.min(to.width-width-8,x)),y:Math.max(0,Math.min(to.height-height-8,y))};}
+ const api={Documents,LatestPreview,fitPanel};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SkyLabSession=api;
 })(typeof window==='undefined'?globalThis:window);

@@ -100,6 +100,7 @@ fn process(r: Request) -> Result<Value> {
     if !matches!(
         r.op.as_str(),
         "generate"
+            | "generate-preview"
             | "export-mis"
             | "export-kml"
             | "cut-stroke"
@@ -235,10 +236,19 @@ fn process(r: Request) -> Result<Value> {
         }
         "line-blocks" => return Ok(json!(blocks::assign(&p))),
         "validate" => return Ok(json!(p)),
+        "generate-preview" => {
+            let lines = generate(&p, &r.settings.ok_or("Parâmetros ausentes")?)?;
+            p.lines = lines;
+            p.polygons.clear();
+            p.layers.clear();
+            p.name = None;
+            return Ok(json!(p));
+        }
         "generate" => {
             let settings = r.settings.ok_or("Parâmetros ausentes")?;
             let subset = if let Some(index) = r.index {
                 Some(Project {
+                    name: None,
                     version: p.version,
                     crs: p.crs.clone(),
                     layers: p.layers.clone(),

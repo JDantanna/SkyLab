@@ -279,7 +279,9 @@ pub fn replace_application(o: &Options, source: &Path) -> Result<()> {
         fs::remove_file(&previous).map_err(err)?;
     }
     fs::rename(&target, &previous).map_err(err)?;
-    let migrate_uninstaller = old.version.starts_with("0.1.");
+    let migrate_uninstaller = old.version.starts_with("0.1.")
+        || old.version.starts_with("0.2.")
+        || old.version.starts_with("0.3.");
     let old_uninstaller = o.root.join("Uninstall.previous.exe");
     let result = (|| {
         if migrate_uninstaller {

@@ -1,4 +1,4 @@
-# SkyLab 0.3 — revisão de operação
+# SkyLab 0.4 — revisão de operação
 
 ## Tela inicial e atalhos
 
@@ -135,3 +135,9 @@ O painel Linhas da missão acompanha o bloco ativo indicado acima da lista. Sele
 No painel Linhas da missão, crie grupos e arraste os títulos dos arquivos ou pastas para dentro de um grupo. Arraste para Mover para a raiz para retirar; arraste às bordas de um título para reordenar. Duplo clique renomeia a pasta. O olho esconde ou exibe grupos, arquivos e linhas, sem apagar dados. Exporte tudo ou a seleção nos botões do rodapé.
 
 Ao selecionar um polígono, a geração abre em um painel flutuante modular junto dele. Os campos ficam expostos; a nova prévia é violeta quando já existem linhas. A hierarquia e os olhos são preservados no projeto JSON formato 5.
+
+## Project layers e formato SkyLab (0.4)
+
+Use Novo grupo e arraste os títulos para organizar os arquivos; Mover para a raiz retira o item do grupo. O olho controla arquivos e objetos. O menu do botão direito permite renomear e excluir; dois cliques sobre o nome também renomeiam. Ctrl+Z restaura exclusões. Os mesmos grupos aparecem em Mission lines.
+
+Salvar projeto usa `.skylab`. A instalação/atualização registra a extensão e o ícone para abrir no SkyLab. Arquivos JSON antigos ainda podem ser importados. O formato interno 6 mantém o nome do projeto, nomes de polígonos e sua visibilidade.

@@ -81,3 +81,20 @@ fn queue_rejects_invalid_inputs_and_recents_are_limited_to_twelve() {
     fs::remove_file(root.join("recent.json")).unwrap();
     fs::remove_dir(root).unwrap();
 }
+
+#[test]
+fn skylab_projects_are_accepted_for_open_and_recent_files_without_copying_their_contents() {
+    let root = root();
+    let path = root.join("project.skylab");
+    fs::write(&path, "{\"version\":6}").unwrap();
+    let mut files = Files::at(root.clone());
+    files.enqueue(std::slice::from_ref(&path), true).unwrap();
+    let id = files.pending().unwrap().id;
+    assert_eq!(files.read(id).unwrap()["name"], "project.skylab");
+    files.remember(id).unwrap();
+    assert_eq!(files.recent().len(), 1);
+    fs::remove_file(&path).unwrap();
+    files.forget(id).unwrap();
+    fs::remove_file(root.join("recent.json")).unwrap();
+    fs::remove_dir(root).unwrap();
+}

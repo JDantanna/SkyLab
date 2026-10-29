@@ -28,6 +28,10 @@ pub struct Crs {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Polygon {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub hidden: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layer: Option<u32>,
     pub outer: Vec<Point>,
     pub holes: Vec<Vec<Point>>,
@@ -45,6 +49,8 @@ pub struct Line {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Project {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub layers: Vec<layers::Layer>,
     pub version: u8,
@@ -260,6 +266,7 @@ fn validate_ring(r: &[Point]) -> Result<()> {
 impl Project {
     pub fn empty(crs: Crs) -> Self {
         Self {
+            name: None,
             layers: vec![],
             version: if crs.authority.is_some() { 2 } else { 1 },
             crs,
@@ -272,10 +279,24 @@ impl Project {
         self.validate_with_lines(&self.lines)
     }
     fn validate_with_lines(&self, lines: &[Line]) -> Result<()> {
-        if ![1, 2, 3, 4, 5].contains(&self.version)
+        if ![1, 2, 3, 4, 5, 6].contains(&self.version)
             || (self.crs.authority.is_some() && self.version < 2)
         {
             return Err("Versão de projeto não suportada.".into());
+        }
+        if self.name.as_ref().is_some_and(|n| {
+            n.trim().is_empty() || n.len() > 400 || n.chars().any(char::is_control)
+        }) || self.polygons.iter().any(|p| {
+            p.name.as_ref().is_some_and(|n| {
+                n.trim().is_empty() || n.len() > 400 || n.chars().any(char::is_control)
+            })
+        }) {
+            return Err("Invalid project or polygon name".into());
+        }
+        if self.version < 6
+            && (self.name.is_some() || self.polygons.iter().any(|p| p.name.is_some() || p.hidden))
+        {
+            return Err("Named projects and polygon visibility require format 6".into());
         }
         self.crs.validate()?;
         layers::validate(self)?;
@@ -318,28 +339,37 @@ impl Project {
                 }
             }
         }
-        let mut names = std::collections::HashSet::new();
-        for l in lines {
-            if !valid_name(&l.name) || !names.insert((l.layer, &l.name)) {
-                return Err(format!(
-                    "Nome inválido ou repetido: {}. Use ASCII, sem espaços, até 64 caracteres.",
-                    l.name
-                ));
-            }
-            if l.points.len() < 2 || length(l) < 0.01 {
-                return Err("Linha precisa de ao menos dois pontos distintos.".into());
-            }
-        }
         for p in self
             .polygons
             .iter()
             .flat_map(|g| g.outer.iter().chain(g.holes.iter().flatten()))
-            .chain(lines.iter().flat_map(|l| l.points.iter()))
         {
             self.crs.inverse(*p)?;
         }
+        validate_line_data(&self.crs, lines)?;
         Ok(())
     }
+}
+fn validate_line_data(crs: &Crs, lines: &[Line]) -> Result<()> {
+    if lines.len() > 20000 || lines.iter().map(|l| l.points.len()).sum::<usize>() > 200000 {
+        return Err("Projeto excede os limites desta versão.".into());
+    }
+    let mut names = std::collections::HashSet::new();
+    for l in lines {
+        if !valid_name(&l.name) || !names.insert((l.layer, &l.name)) {
+            return Err(format!(
+                "Nome inválido ou repetido: {}. Use ASCII, sem espaços, até 64 caracteres.",
+                l.name
+            ));
+        }
+        if l.points.len() < 2 || length(l) < 0.01 {
+            return Err("Linha precisa de ao menos dois pontos distintos.".into());
+        }
+    }
+    for point in lines.iter().flat_map(|l| &l.points) {
+        crs.inverse(*point)?;
+    }
+    Ok(())
 }
 pub fn import_mis(text: &str, crs: Crs) -> Result<Project> {
     let mut p = Project::empty(crs);
@@ -493,6 +523,8 @@ pub fn import_kml(text: &str, crs: Crs) -> Result<Project> {
                 .find(|n| n.has_tag_name("outerBoundaryIs"))
                 .ok_or("Polígono sem contorno externo")?;
             let mut g = Polygon {
+                name: None,
+                hidden: false,
                 layer: None,
                 outer: coords(outer, &p.crs)?,
                 holes: vec![],
@@ -668,7 +700,7 @@ pub fn generate(p: &Project, s: &Settings) -> Result<Vec<Line>> {
     if out.is_empty() {
         return Err("Nenhuma linha gerada com esses parâmetros.".into());
     }
-    p.validate_with_lines(&out)?;
+    validate_line_data(&p.crs, &out)?;
     Ok(out)
 }
 pub fn trim_line(l: &Line, start: f64, end: f64) -> Result<Line> {

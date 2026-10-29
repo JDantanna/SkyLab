@@ -86,8 +86,8 @@ impl Files {
             .and_then(|s| s.to_str())
             .unwrap_or("")
             .to_ascii_lowercase();
-        if !["mis", "mission", "kml", "kmz", "json"].contains(&ext.as_str()) {
-            return Err("Choose KML, KMZ, MIS or a JSON project".into());
+        if !["mis", "mission", "kml", "kmz", "json", "skylab"].contains(&ext.as_str()) {
+            return Err("Choose KML, KMZ, MIS or a SkyLab project".into());
         }
         let path = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
         if require_file {

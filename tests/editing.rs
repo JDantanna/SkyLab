@@ -12,6 +12,7 @@ fn line(name: &str, points: &[[f64; 2]]) -> Line {
 }
 fn project(lines: Vec<Line>) -> Project {
     Project {
+        name: None,
         layers: vec![],
         version: 1,
         crs: Crs {

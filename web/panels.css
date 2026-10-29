@@ -29,3 +29,7 @@ body>main,.native-window body:not(.setup-screen)>main{--left-width:300px;--right
 #polygon-tools .naming{grid-template-columns:minmax(55px,.65fr) minmax(0,1.2fr) minmax(0,1fr)}#polygon-tools .naming>label:first-child{grid-column:auto}
 
 [data-panel=review]>.panel-body{overflow:auto}
+
+.project-feature-row{display:flex;align-items:center;gap:4px;min-width:0}.project-feature-row .layer-feature{flex:1;min-width:0}.file-layer>summary{display:grid;grid-template-columns:10px 23px minmax(0,1fr);column-gap:5px;list-style:none;cursor:grab}.file-layer>summary::-webkit-details-marker{display:none}.file-layer>summary::before{content:'▸';grid-column:1;grid-row:1/3;font-size:10px}.file-layer[open]>summary::before{content:'▾'}.file-layer>summary>.mission-eye{grid-column:2;grid-row:1/3}.file-layer>summary>.project-layer-name{grid-column:3;grid-row:1;font-size:11px;cursor:default;overflow-wrap:anywhere}.file-layer>summary>small{grid-column:3;grid-row:2;margin:0;padding:0}.project-feature-row .layer-feature{min-height:28px}#project-root-drop{font-size:10px;color:#547397;padding:4px 6px;border:1px dashed #bccce0;border-radius:4px;flex:1;text-align:center}
+
+.file-layer>summary{user-select:none;touch-action:none}

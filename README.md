@@ -1,6 +1,14 @@
-# SkyLab — 0.3
+# SkyLab — 0.4
 
 Primeira versão utilizável, local, do fluxo de missões do SkyLab para helicópteros. O cálculo e a validação são feitos em Rust; a interface usa uma janela Windows própria e opera localmente. Não utiliza nem executa o programa antigo.
+
+## Projetos SkyLab
+
+Salvar projeto usa `.skylab`, com nome do projeto e associação de arquivo e ícone registrados pelo instalador e pela atualização. Arquivos JSON antigos continuam abrindo. O formato interno 6 preserva nomes de projeto/polígonos e visibilidade individual dos polígonos, além de grupos e origem dos arquivos. Novos campos exigem esta revisão; versões anteriores do formato continuam legíveis.
+
+Project layers oferece grupos, arrasto e retorno à raiz, olhos de visibilidade para arquivos, linhas e polígonos, renomeação pelo menu ou pelo duplo clique no nome e exclusão pelo menu. Excluir uma camada/grupo remove seu conteúdo; Ctrl+Z restaura a operação. A organização permanece sincronizada com Mission lines.
+
+A prévia da geração envia somente o polígono ativo e redesenha apenas as linhas temporárias. O cálculo elimina uma validação topológica duplicada, mantendo as validações de entrada e saída. Os painéis são ajustados proporcionalmente ao tamanho da área de trabalho, preservando o arranjo ao maximizar e restaurar.
 
 ## Layout e arquivos
 
@@ -54,7 +62,7 @@ A opção Google Satellite XYZ utiliza a mesma conexão do QuickMapServices/QGIS
 
 ## Instalar e abrir
 
-Obtenha **SkyTEM-SkyLab-Setup-0.3-r2.exe** na [Release 0.2](https://github.com/JDantanna/SkyLab/releases/tag/v0.3-r2) e execute o instalador. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
+Obtenha **SkyTEM-SkyLab-Setup-0.4-r1.exe** na [Release 0.2](https://github.com/JDantanna/SkyLab/releases/tag/v0.4-r1) e execute o instalador. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
 
 Abra **SkyLab** pelo menu Iniciar ou pelo atalho. A janela Windows usa WebView2 e controles integrados ao cabeçalho azul, sem a moldura do navegador. A versão exibida é **0.2** (0.2.0 no pacote Rust). Antes de qualquer avanço de versão, será solicitada uma decisão explícita do usuário.
 

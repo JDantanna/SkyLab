@@ -112,6 +112,7 @@ pub fn subset(project: &Project, id: u32) -> Result<Project> {
     }
     let warnings = selected.iter().flat_map(|l| l.warnings.clone()).collect();
     let result = Project {
+        name: project.name.clone(),
         version: project.version.max(3),
         crs: project.crs.clone(),
         warnings,
