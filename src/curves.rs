@@ -1,7 +1,10 @@
 //! Editable cubic polygon paths. Geometry used by mission tools is flattened in metres.
+use crate::bezier::{controls, sample, segment_distance, split};
 use crate::{Point, Polygon, Project, Result, distance, layers};
 use serde::{Deserialize, Serialize};
-const TOLERANCE: f64 = 0.1;
+fn point(c: [Point; 4], t: f64) -> Point {
+    split(c, t).0[3]
+}
 const MAX_POINTS: usize = crate::MAX_RING_POINTS;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Anchor {
@@ -10,56 +13,6 @@ pub struct Anchor {
     pub incoming: Option<Point>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub outgoing: Option<Point>,
-}
-fn mix(a: Point, b: Point, t: f64) -> Point {
-    [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
-}
-fn controls(a: &Anchor, b: &Anchor) -> [Point; 4] {
-    [
-        a.point,
-        a.outgoing.unwrap_or(a.point),
-        b.incoming.unwrap_or(b.point),
-        b.point,
-    ]
-}
-fn split(c: [Point; 4], t: f64) -> ([Point; 4], [Point; 4]) {
-    let a = mix(c[0], c[1], t);
-    let b = mix(c[1], c[2], t);
-    let d = mix(c[2], c[3], t);
-    let e = mix(a, b, t);
-    let f = mix(b, d, t);
-    let point = mix(e, f, t);
-    ([c[0], a, e, point], [point, f, d, c[3]])
-}
-fn point(c: [Point; 4], t: f64) -> Point {
-    split(c, t).0[3]
-}
-fn segment_distance(p: Point, a: Point, b: Point) -> f64 {
-    let dx = b[0] - a[0];
-    let dy = b[1] - a[1];
-    let den = dx * dx + dy * dy;
-    let t = if den > 0.0 {
-        ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / den
-    } else {
-        0.0
-    };
-    distance(p, mix(a, b, t.clamp(0.0, 1.0)))
-}
-fn sample(c: [Point; 4], range: [f64; 2], depth: u8, out: &mut Vec<(Point, f64)>) -> Result<()> {
-    if out.len() >= MAX_POINTS {
-        return Err("Polygon curve exceeds the vertex limit; simplify its anchors.".into());
-    }
-    if segment_distance(c[1], c[0], c[3]).max(segment_distance(c[2], c[0], c[3])) <= TOLERANCE {
-        out.push((c[3], range[1]));
-        return Ok(());
-    }
-    if depth >= 24 {
-        return Err("Polygon curve cannot be flattened at the required precision.".into());
-    }
-    let (a, b) = split(c, 0.5);
-    let middle = (range[0] + range[1]) / 2.0;
-    sample(a, [range[0], middle], depth + 1, out)?;
-    sample(b, [middle, range[1]], depth + 1, out)
 }
 fn validate_anchors(anchors: &[Anchor]) -> Result<()> {
     if !(3..MAX_POINTS).contains(&anchors.len()) {
@@ -86,6 +39,7 @@ pub fn flatten(anchors: &[Anchor]) -> Result<Vec<Point>> {
             [0.0, 1.0],
             0,
             &mut out,
+            MAX_POINTS,
         )?;
     }
     let mut ring = Vec::with_capacity(out.len());
@@ -198,7 +152,7 @@ pub fn insert(project: &Project, index: usize, target: Point) -> Result<Project>
     for i in 0..anchors.len() {
         let c = controls(&anchors[i], &anchors[(i + 1) % anchors.len()]);
         let mut samples = vec![(c[0], 0.0)];
-        sample(c, [0.0, 1.0], 0, &mut samples)?;
+        sample(c, [0.0, 1.0], 0, &mut samples, MAX_POINTS)?;
         for pair in samples.windows(2) {
             let d = segment_distance(target, pair[0].0, pair[1].0);
             if d < nearest.0 {

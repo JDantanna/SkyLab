@@ -64,15 +64,7 @@ pub fn cut(project: &Project, stroke: &[Point]) -> Result<Project> {
     }
     let box_all = bounds(stroke);
     let mut work = 0usize;
-    let mut result = Project {
-        name: project.name.clone(),
-        version: project.version,
-        crs: project.crs.clone(),
-        layers: project.layers.clone(),
-        polygons: project.polygons.clone(),
-        warnings: project.warnings.clone(),
-        lines: Vec::with_capacity(project.lines.len()),
-    };
+    let mut result = project.with_lines(Vec::with_capacity(project.lines.len()));
     let mut visibility = std::collections::HashMap::new();
     let mut names: HashSet<String> = project.lines.iter().map(|l| l.name.clone()).collect();
     for line in &project.lines {

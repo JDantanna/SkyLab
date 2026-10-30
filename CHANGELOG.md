@@ -1,5 +1,12 @@
 # Histórico de versões
 
+## 0.5 — revisão de desempenho (revisão interna 2)
+
+- Leitura de pontos de edição envia somente a geometria selecionada, preservando validação de CRS e camadas.
+- Desenho da cartografia consolidado por quadro; tradução deixa de percorrer a interface durante atualizações gráficas. Pontos fora da janela não geram controles invisíveis.
+- Matemática Bézier compartilhada entre linhas e polígonos, sem mudar tolerância ou limites; edição evita cópias descartadas e validações repetidas.
+- Importação QGIS contabiliza cada fonte uma vez, mantendo limites e validação final.
+
 ## 0.5 — cartografia e projetos QGIS (revisão interna 1)
 
 - Shift+C abre/fecha o modo cartografia após carregar geometria. Workspace ampliado e barra vertical flutuante com seleção, corte, caneta, mão, excluir, emendar, aplicar/cancelar, satélite, enquadrar e histórico. Layout de painéis preservado ao sair.

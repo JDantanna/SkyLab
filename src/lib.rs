@@ -1,6 +1,7 @@
 //! Local mission geometry. Working coordinates use a projected CRS in metres.
 use serde::{Deserialize, Serialize};
 use std::fmt::Write as _;
+mod bezier;
 pub mod blocks;
 pub mod curves;
 pub mod desktop;
@@ -269,6 +270,18 @@ fn validate_ring(r: &[Point]) -> Result<()> {
     Ok(())
 }
 impl Project {
+    pub(crate) fn with_lines(&self, lines: Vec<Line>) -> Self {
+        Self {
+            name: self.name.clone(),
+            version: self.version,
+            crs: self.crs.clone(),
+            layers: self.layers.clone(),
+            polygons: self.polygons.clone(),
+            warnings: self.warnings.clone(),
+            lines,
+        }
+    }
+
     pub fn empty(crs: Crs) -> Self {
         Self {
             name: None,

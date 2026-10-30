@@ -1,52 +1,6 @@
 //! Editable open cubic paths. MIS exports the validated flattened vertices.
+use crate::bezier::{controls, sample, segment_distance, split};
 use crate::{Line, Point, Project, Result, curves::Anchor, distance, layers, length};
-const TOLERANCE: f64 = 0.1;
-fn mix(a: Point, b: Point, t: f64) -> Point {
-    [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
-}
-fn controls(a: &Anchor, b: &Anchor) -> [Point; 4] {
-    [
-        a.point,
-        a.outgoing.unwrap_or(a.point),
-        b.incoming.unwrap_or(b.point),
-        b.point,
-    ]
-}
-fn split(c: [Point; 4], t: f64) -> ([Point; 4], [Point; 4]) {
-    let a = mix(c[0], c[1], t);
-    let b = mix(c[1], c[2], t);
-    let d = mix(c[2], c[3], t);
-    let e = mix(a, b, t);
-    let f = mix(b, d, t);
-    let p = mix(e, f, t);
-    ([c[0], a, e, p], [p, f, d, c[3]])
-}
-fn segment_distance(p: Point, a: Point, b: Point) -> f64 {
-    let d = [b[0] - a[0], b[1] - a[1]];
-    let den = d[0] * d[0] + d[1] * d[1];
-    let t = if den > 0. {
-        ((p[0] - a[0]) * d[0] + (p[1] - a[1]) * d[1]) / den
-    } else {
-        0.
-    };
-    distance(p, mix(a, b, t.clamp(0., 1.)))
-}
-fn sample(c: [Point; 4], range: [f64; 2], depth: u8, out: &mut Vec<(Point, f64)>) -> Result<()> {
-    if out.len() >= 200000 {
-        return Err("Line curve exceeds the vertex limit.".into());
-    }
-    if segment_distance(c[1], c[0], c[3]).max(segment_distance(c[2], c[0], c[3])) <= TOLERANCE {
-        out.push((c[3], range[1]));
-        return Ok(());
-    }
-    if depth >= 24 {
-        return Err("Line curve cannot be flattened at the required precision.".into());
-    }
-    let (a, b) = split(c, 0.5);
-    let m = (range[0] + range[1]) / 2.;
-    sample(a, [range[0], m], depth + 1, out)?;
-    sample(b, [m, range[1]], depth + 1, out)
-}
 pub fn flatten(anchors: &[Anchor]) -> Result<Vec<Point>> {
     if !(2..=20000).contains(&anchors.len()) {
         return Err("A line needs 2 to 20,000 control points.".into());
@@ -63,7 +17,7 @@ pub fn flatten(anchors: &[Anchor]) -> Result<Vec<Point>> {
     }
     let mut out = vec![(anchors[0].point, 0.)];
     for pair in anchors.windows(2) {
-        sample(controls(&pair[0], &pair[1]), [0., 1.], 0, &mut out)?;
+        sample(controls(&pair[0], &pair[1]), [0., 1.], 0, &mut out, 200000)?;
     }
     let mut points = Vec::with_capacity(out.len());
     for (p, _) in out {
@@ -90,23 +44,35 @@ pub fn anchors(line: &Line) -> Vec<Anchor> {
 }
 pub fn upsert(project: &Project, index: Option<usize>, anchors: Vec<Anchor>) -> Result<Project> {
     project.validate()?;
+    upsert_validated(project, index, anchors)
+}
+fn upsert_validated(
+    project: &Project,
+    index: Option<usize>,
+    anchors: Vec<Anchor>,
+) -> Result<Project> {
     let points = flatten(&anchors)?;
-    let mut next = project.clone();
-    next.version = 7;
-    if let Some(i) = index {
-        let line = next
-            .lines
-            .get_mut(i)
-            .ok_or("Selected line is unavailable")?;
-        line.points = points;
-        line.curve = Some(anchors);
+    let mut next = if let Some(i) = index {
+        let line = project.lines.get(i).ok_or("Selected line is unavailable")?;
+        let mut lines = Vec::with_capacity(project.lines.len());
+        lines.extend(project.lines[..i].iter().cloned());
+        lines.push(Line {
+            name: line.name.clone(),
+            layer: line.layer,
+            hidden: line.hidden,
+            points,
+            curve: Some(anchors),
+        });
+        lines.extend(project.lines[i + 1..].iter().cloned());
+        project.with_lines(lines)
     } else {
+        let mut next = project.clone();
         let layer = next
             .layers
             .iter()
             .find(|l| l.source == "Drawing" && layers::visible(&next, Some(l.id)))
             .map(|l| l.id)
-            .unwrap_or(layers::next_id(&next)?);
+            .map_or_else(|| layers::next_id(&next), Ok)?;
         if !next.layers.iter().any(|l| l.id == layer) {
             next.layers.push(layers::Layer {
                 id: layer,
@@ -117,12 +83,14 @@ pub fn upsert(project: &Project, index: Option<usize>, anchors: Vec<Anchor>) -> 
                 warnings: vec![],
             });
         }
-        let mut n = 1;
-        while next
+        let used: std::collections::HashSet<_> = next
             .lines
             .iter()
-            .any(|l| l.layer == Some(layer) && l.name == format!("DRAW_{n}"))
-        {
+            .filter(|l| l.layer == Some(layer))
+            .map(|l| l.name.as_str())
+            .collect();
+        let mut n = 1;
+        while used.contains(format!("DRAW_{n}").as_str()) {
             n += 1;
         }
         next.lines.push(Line {
@@ -132,7 +100,9 @@ pub fn upsert(project: &Project, index: Option<usize>, anchors: Vec<Anchor>) -> 
             hidden: false,
             curve: Some(anchors),
         });
-    }
+        next
+    };
+    next.version = 7;
     next.validate()?;
     Ok(next)
 }
@@ -150,7 +120,7 @@ pub fn insert(project: &Project, index: usize, target: Point) -> Result<Project>
     for i in 0..nodes.len() - 1 {
         let c = controls(&nodes[i], &nodes[i + 1]);
         let mut samples = vec![(c[0], 0.)];
-        sample(c, [0., 1.], 0, &mut samples)?;
+        sample(c, [0., 1.], 0, &mut samples, 200000)?;
         for pair in samples.windows(2) {
             let d = segment_distance(target, pair[0].0, pair[1].0);
             if d < nearest.0 {
@@ -184,17 +154,17 @@ pub fn insert(project: &Project, index: usize, target: Point) -> Result<Project>
             outgoing: Some(b[1]),
         },
     );
-    upsert(project, Some(index), nodes)
+    upsert_validated(project, Some(index), nodes)
 }
-fn reverse(mut line: Line) -> Line {
-    line.points.reverse();
-    if let Some(nodes) = &mut line.curve {
+fn oriented_anchors(line: &Line, reverse: bool) -> Vec<Anchor> {
+    let mut nodes = anchors(line);
+    if reverse {
         nodes.reverse();
-        for a in nodes {
+        for a in &mut nodes {
             std::mem::swap(&mut a.incoming, &mut a.outgoing);
         }
     }
-    line
+    nodes
 }
 pub fn join(project: &Project, indices: &[usize]) -> Result<Project> {
     project.validate()?;
@@ -226,17 +196,36 @@ pub fn join(project: &Project, indices: &[usize]) -> Result<Project> {
         (true, true, distance(a.points[0], *b.points.last().unwrap())),
     ];
     let &(ra, rb, _) = choices.iter().min_by(|a, b| a.2.total_cmp(&b.2)).unwrap();
-    let first = if ra { reverse(a.clone()) } else { a.clone() };
-    let second = if rb { reverse(b.clone()) } else { b.clone() };
-    let mut nodes = anchors(&first);
-    let mut tail = anchors(&second);
+    let mut nodes = oriented_anchors(a, ra);
+    let mut tail = oriented_anchors(b, rb);
     if distance(nodes.last().unwrap().point, tail[0].point) < 1e-7 {
         nodes.last_mut().unwrap().outgoing = tail[0].outgoing;
         tail.remove(0);
     }
     nodes.extend(tail);
-    let mut next = upsert(project, Some(ids[0]), nodes)?;
-    next.lines.remove(ids[1]);
+    let mut replacement = Some(Line {
+        name: a.name.clone(),
+        layer: a.layer,
+        hidden: a.hidden,
+        points: flatten(&nodes)?,
+        curve: Some(nodes),
+    });
+    let lines = project
+        .lines
+        .iter()
+        .enumerate()
+        .filter_map(|(i, line)| {
+            if i == ids[1] {
+                None
+            } else if i == ids[0] {
+                replacement.take()
+            } else {
+                Some(line.clone())
+            }
+        })
+        .collect();
+    let mut next = project.with_lines(lines);
+    next.version = 7;
     if a.layer != b.layer {
         next.warnings.push("Joined line retains the first line's layer; inspect the connecting segment before export.".into());
     }

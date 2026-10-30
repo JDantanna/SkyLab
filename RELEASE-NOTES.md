@@ -1,9 +1,9 @@
-# SkyLab 0.5
+# SkyLab 0.5 — revisão interna 2
 
-- Modo cartografia: Shift+C, workspace ampliado e barra lateral flutuante.
-- Edição de linhas por pontos e alças Bézier, corte, extensão e emenda com prévia; Ctrl+Z/Ctrl+Y.
-- Satélite e enquadramento acessíveis na barra; Espaço mantém navegação durante edição.
-- Importação de projetos QGIS .qgs/.qgz/.qlr com fontes vetoriais locais GeoPackage, Shapefile, GeoJSON e KML/KMZ, preservando grupos e coordenadas.
-- Fontes referenciadas devem continuar disponíveis junto ao projeto. Fontes ausentes/incompatíveis geram aviso; não são executados plugins ou conexões remotas do QGIS.
-- Salvar mantém o projeto em .skylab. MIS exporta a geometria validada e achatada, sem remover vértices.
+- Edição mais leve: solicita somente os pontos da geometria selecionada.
+- Cartografia redesenhada uma vez por quadro, com menos projeções e controles invisíveis.
+- Tradução deixa de percorrer a interface a cada alteração gráfica.
+- Matemática Bézier compartilhada; menos cópias e validações intermediárias na edição de linhas.
+- Leitura de camadas QGIS sem recontagens acumuladas de geometria.
+- Mantidos formatos, vértices, coordenadas, histórico, ferramentas e versão visível 0.5.
 - Atualização interna preserva os projetos abertos. Versão de testes institucional.

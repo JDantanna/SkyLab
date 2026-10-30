@@ -160,6 +160,7 @@ pub fn read(path: &Path) -> Result<Bundle> {
         map: &HashMap<String, roxmltree::Node<'_, '_>>,
         bundle: &mut Bundle,
         depth: usize,
+        budget: &mut (usize, usize),
     ) -> Result<()> {
         if depth > 31 || bundle.sources.len() >= 1000 {
             return Err("QGIS project exceeds the layer hierarchy limit".into());
@@ -187,7 +188,7 @@ pub fn read(path: &Path) -> Result<Bundle> {
             for child in node.children().filter(|n| {
                 n.has_tag_name("layer-tree-group") || n.has_tag_name("layer-tree-layer")
             }) {
-                add(child, Some(id), base, map, bundle, depth + 1)?;
+                add(child, Some(id), base, map, bundle, depth + 1, budget)?;
             }
             return Ok(());
         }
@@ -268,20 +269,28 @@ pub fn read(path: &Path) -> Result<Bundle> {
             source.layer.warnings.push(message.clone());
             bundle.warnings.push(message);
         }
+        budget.0 += source.shapes.len();
+        budget.1 += source
+            .shapes
+            .iter()
+            .flat_map(|g| &g.rings)
+            .map(Vec::len)
+            .sum::<usize>();
+        check_vector_budget(budget.0, budget.1)?;
         bundle.sources.push(source);
-        check_limits(bundle)?;
         Ok(())
     }
+    let mut budget = (0, 0);
     if let Some(tree) = root.children().find(|n| n.has_tag_name("layer-tree-group")) {
         for node in tree
             .children()
             .filter(|n| n.has_tag_name("layer-tree-group") || n.has_tag_name("layer-tree-layer"))
         {
-            add(node, None, base, &map, &mut bundle, 0)?;
+            add(node, None, base, &map, &mut bundle, 0, &mut budget)?;
         }
     } else {
         for node in root.descendants().filter(|n| n.has_tag_name("maplayer")) {
-            add(node, None, base, &map, &mut bundle, 0)?;
+            add(node, None, base, &map, &mut bundle, 0, &mut budget)?;
         }
     }
     check_bundle(&bundle)?;
@@ -301,6 +310,9 @@ fn check_limits(bundle: &Bundle) -> Result<()> {
             }
         }
     }
+    check_vector_budget(count, vertices)
+}
+fn check_vector_budget(count: usize, vertices: usize) -> Result<()> {
     if count > 20000 || vertices > 200000 {
         return Err("QGIS vectors exceed 20,000 features or 200,000 vertices".into());
     }
