@@ -1,6 +1,7 @@
 'use strict';
 (() => {
   const bridge=window.chrome?.webview;if(!bridge)return;
+  window.skyMaximizeProject=()=>bridge.postMessage('maximize-project');
   document.documentElement.classList.add('native-window');
   const splash=document.getElementById('startup-screen');
   if(splash){

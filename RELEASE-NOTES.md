@@ -1,9 +1,8 @@
-# SkyLab 0.5 — revisão interna 2
+# SkyLab 0.5 — revisão interna 3
 
-- Edição mais leve: solicita somente os pontos da geometria selecionada.
-- Cartografia redesenhada uma vez por quadro, com menos projeções e controles invisíveis.
-- Tradução deixa de percorrer a interface a cada alteração gráfica.
-- Matemática Bézier compartilhada; menos cópias e validações intermediárias na edição de linhas.
-- Leitura de camadas QGIS sem recontagens acumuladas de geometria.
-- Mantidos formatos, vértices, coordenadas, histórico, ferramentas e versão visível 0.5.
-- Atualização interna preserva os projetos abertos. Versão de testes institucional.
+- Removidos os painéis Selected line e Actions for all lines.
+- Projetos abrem com a janela maximizada.
+- Ícone de mapa ao lado de Editar abre o modo cartografia; acesso retirado do menu principal. Shift+C permanece disponível.
+- Cortar por distância e ações nos menus de contexto preservados.
+- Restauração de sessões anteriores compatível com a remoção dos painéis.
+- Versão visível mantida em 0.5; atualização interna preserva projetos abertos.

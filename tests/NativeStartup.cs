@@ -18,6 +18,12 @@ internal static class NativeStartup {
                         for(int y=0;y<image.Height&&!visible;y++)for(int x=0;x<image.Width;x++)if(image.GetPixel(x,y).A>0){visible=true;break;}
                         if(!visible)throw new Exception("Startup logo is empty.");
                     }
+                    if(!setup) {
+                        var command=typeof(ShellWindow).GetMethod("RunCommand",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
+                        command.Invoke(window,new object[]{"maximize-project"});
+                        command.Invoke(window,new object[]{"maximize-project"});
+                        if(window.WindowState!=FormWindowState.Maximized)throw new Exception("Project maximization must be idempotent.");
+                    }
                     splash.Image.Dispose();splash.Image=null;
                     Console.WriteLine((setup?"Installer":"Application")+": native window and startup logo OK");
                 }

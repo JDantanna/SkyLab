@@ -1,5 +1,12 @@
 # Histórico de versões
 
+## 0.5 — painéis e acesso à cartografia (revisão interna 3)
+
+- Removidos os painéis Linha selecionada e Ações para todas as linhas, incluindo controles, estilos e ligações exclusivas. Cortar por distância e ações das ferramentas/menus de contexto preservados.
+- Novos projetos abrem com a janela maximizada; alternar abas já abertas mantém o tamanho escolhido pelo operador.
+- Cartografia acessível por ícone de mapa ao lado de Editar, com estado ativo e atalho configurado; removida do menu principal.
+- Sessões de versões anteriores ignoram campos dos painéis removidos ao restaurar abas.
+
 ## 0.5 — revisão de desempenho (revisão interna 2)
 
 - Leitura de pontos de edição envia somente a geometria selecionada, preservando validação de CRS e camadas.

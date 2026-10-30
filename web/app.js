@@ -16,9 +16,9 @@ const status=(s,error=false)=>{$('status').textContent=s;$('status').classList.t
 async function api(op,extra={}){const res=await fetch('/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op,project,...extra})});const r=await res.json();if(!r.ok)throw Error(r.error);return r.data;}
 async function action(fn){if(busy)return;busy=true;document.body.setAttribute('aria-busy','true');refreshButtons();try{await fn()}catch(e){status(e.message,true)}finally{busy=false;document.body.removeAttribute('aria-busy');refreshButtons()}}
 function refreshButtons(){const has=!!project,lines=!!project?.lines.length,block=!!project?.polygons.length,sel=selected>=0&&lines;
-for(const id of ['save'])$(id).disabled=busy||!has;for(const id of ['export','renumber'])$(id).disabled=busy||!lines;
-$('generate').disabled=busy||!block;$('clip-all').disabled=busy||!lines||!block;$('clip-selected').disabled=busy||!sel||!block;
-for(const id of ['rename','apply-points','trim','split','reverse','delete'])$(id).disabled=busy||!sel;
+for(const id of ['save'])$(id).disabled=busy||!has;for(const id of ['export'])$(id).disabled=busy||!lines;
+$('generate').disabled=busy||!block;
+for(const id of ['trim','split'])$(id).disabled=busy||!sel;
 $('undo').disabled=busy||!history.length;$('redo').disabled=busy||!future.length;
 $('zone').disabled=has;$('hemisphere').disabled=has;
 for(const id of ['demo','file'])$(id).disabled=busy;
@@ -26,10 +26,10 @@ for(const id of ['demo','file'])$(id).disabled=busy;
 function render(){const p=project;const lines=p?.lines||[];$('line-count').textContent=lines.length;$('list-count').textContent=lines.length;$('total-length').replaceChildren(document.createTextNode(formatted(lines.reduce((a,l)=>a+lineLength(l),0)/1000,2)+' '),Object.assign(document.createElement('em'),{textContent:'km'}));$('block-count').textContent=p?.polygons.length||0;
 if(p){$('zone').value=p.crs.zone;$('hemisphere').value=p.crs.south?'south':'north'}$('crs-label').textContent=crsName(p?.crs||getCrs());$('empty').hidden=!!(lines.length||p?.polygons.length);
 const notes=$('warnings').querySelector('ul');notes.replaceChildren();for(const s of new Set(p?.warnings||[])){notes.append(Object.assign(document.createElement('li'),{textContent:s}))}$('warnings').hidden=!notes.children.length;
-renderList();renderEditor();refreshButtons();draw();}
+renderList();renderTrimInputs();refreshButtons();draw();}
 function renderList(){$('line-list').replaceChildren();}
-let editorLine=null;
-function renderEditor(){const l=project?.lines[selected];$('editor').hidden=!l;$('no-selection').hidden=!!l;if(!l){editorLine=null;return;}const reset=editorLine!==l;editorLine=l;const len=lineLength(l);$('line-name').value=l.name;$('selected-length').textContent=`${metres(len)} m`;$('points').value=l.points.map(p=>p.map(x=>x.toFixed(3)).join(' ')).join('\n');if(reset){$('cut-start').value='0';$('cut-end').value=String(len);$('split-at').value=String(len/2);}}
+let trimLine=null;
+function renderTrimInputs(){const line=project?.lines[selected];if(trimLine===line)return;trimLine=line;if(!line)return;const length=lineLength(line);$('cut-start').value='0';$('cut-end').value=String(length);$('split-at').value=String(length/2);}
 const NS='http://www.w3.org/2000/svg';
 function svgEl(tag,attrs={}){const e=document.createElementNS(NS,tag);for(const [k,v]of Object.entries(attrs))e.setAttribute(k,v);return e;}
 function draw(){const svg=$('map'),w=svg.clientWidth,h=svg.clientHeight;if(!w||!h)return;const layer=document.createDocumentFragment(),bounds=geometryBounds(project);
@@ -54,13 +54,8 @@ $('fit').onclick=()=>{view=null;draw()};$('zoom-in').onclick=()=>zoom(1/1.35);$(
 $('search').oninput=renderList;
 
 for(const ev of ['dragenter','dragover'])$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.add('drag')});$('drop').ondragleave=()=>$('drop').classList.remove('drag');
-async function mutate(fn,msg){const p=clone(project);await fn(p);commit(await api('validate',{project:p}),msg)}
-$('rename').onclick=()=>action(()=>mutate(p=>p.lines[selected].name=$('line-name').value,'Nome atualizado.'));
-$('apply-points').onclick=()=>action(()=>mutate(p=>{p.lines[selected].curve=null;p.lines[selected].points=$('points').value.trim().split(/\n/).map(s=>{const v=s.trim().split(/\s+/).map(Number);if(v.length!==2||v.some(x=>!Number.isFinite(x)))throw Error('Use dois números por vértice: Leste Norte, com ponto decimal.');return v})},'Coordenadas atualizadas. Confira a geometria.'));
 $('trim').onclick=()=>action(async()=>commit(await api('trim',{index:selected,start:Number($('cut-start').value),end:Number($('cut-end').value)}),'Trecho mantido; extremidades removidas.'));
 $('split').onclick=()=>action(async()=>{const index=selected,data=await api('split',{index,start:Number($('split-at').value)});await commit(data,tr('Linha dividida em duas partes com nomes próprios.'));selection=new Set([index,index+1]);selected=index;render();});
-$('clip-all').onclick=()=>action(async()=>commit(await api('clip'),'Recorte concluído. Partes fora do bloco foram removidas.'));
-$('renumber').onclick=()=>action(()=>mutate(p=>{const first=Number($('first').value),inc=Number($('increment').value);if(!Number.isInteger(first)||first<0||!Number.isInteger(inc)||inc<1||first+p.lines.length*inc>4294967295)throw Error('Numeração inválida.');p.lines.forEach((l,i)=>l.name=$('prefix').value+String(first+i*inc).padStart(6,'0'));},'Todas as linhas foram renumeradas.'));
 document.addEventListener('keydown',e=>{
 const command=window.SkyLabInteractions.shortcut(e,{modal:!!document.querySelector('dialog[open]'),touring:!$('tour-layer').hidden,editing:/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||''),busy});
 if(!command)return;e.preventDefault();e.stopPropagation();command==='undo'?undo():redo();

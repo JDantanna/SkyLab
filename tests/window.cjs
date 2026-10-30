@@ -23,3 +23,8 @@ test('page-painted handshake waits for logo decoding and two painted frames befo
  const painted=events.load();assert.deepEqual(messages,[]);assert.equal(frames.length,0);finishFont();await new Promise(setImmediate);assert.equal(frames.length,0);finishImage();await painted;
  assert.equal(frames.length,1);frames.shift()();assert.deepEqual(messages,[]);frames.shift()();assert.deepEqual(messages,['startup-painted']);
 });
+
+test('opening a document requests maximization once, while switching existing tabs preserves the chosen window size',()=>{
+ const home=fs.readFileSync(require.resolve('../web/home.js'),'utf8'),a=home.indexOf('const maximizedProjects='),b=home.indexOf('function syncHome(',a);let item=null,maximized=0;const ctx=vm.createContext({WeakSet,documents:{current:()=>item},window:{skyMaximizeProject(){maximized++;}}});vm.runInContext(home.slice(a,b),ctx);
+ ctx.maximizeOpenedProject();assert.equal(maximized,0);item={id:1};const first=item;ctx.maximizeOpenedProject();ctx.maximizeOpenedProject();assert.equal(maximized,1);item={id:2};ctx.maximizeOpenedProject();assert.equal(maximized,2);item=first;ctx.maximizeOpenedProject();assert.equal(maximized,2);item=null;ctx.maximizeOpenedProject();item={id:3};ctx.maximizeOpenedProject();assert.equal(maximized,3);
+});

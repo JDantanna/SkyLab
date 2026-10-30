@@ -254,6 +254,7 @@ internal sealed class ShellWindow : Form {
     private void RunCommand(string command){
         switch(command) {
             case "minimize":WindowState=FormWindowState.Minimized;break;
+            case "maximize-project":WindowState=FormWindowState.Maximized;break;
             case "maximize":WindowState=WindowState==FormWindowState.Maximized?FormWindowState.Normal:FormWindowState.Maximized;break;
             case "close":Close();break;
             case "drag":if(WindowState!=FormWindowState.Maximized){ReleaseCapture();SendMessage(Handle,0xA1,new IntPtr(2),IntPtr.Zero);}break;
