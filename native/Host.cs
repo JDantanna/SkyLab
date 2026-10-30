@@ -13,8 +13,8 @@ using Microsoft.Web.WebView2.WinForms;
 internal static class Program {
     [DllImport("user32.dll")] private static extern bool SetProcessDPIAware();
     [STAThread] private static int Main(string[] args) {
-        if(args.Length==1&&args[0]=="--read-kmz") {
-            try {var bytes=ReadKmz();using(var output=Console.OpenStandardOutput())output.Write(bytes,0,bytes.Length);return 0;}
+        if(args.Length==1&&(args[0]=="--read-kmz"||args[0]=="--read-qgz")) {
+            try {var bytes=ReadArchive(args[0]=="--read-qgz"?".qgs":".kml");using(var output=Console.OpenStandardOutput())output.Write(bytes,0,bytes.Length);return 0;}
             catch(Exception e){var bytes=System.Text.Encoding.UTF8.GetBytes(e.GetBaseException().Message);using(var output=Console.OpenStandardError())output.Write(bytes,0,bytes.Length);return 1;}
         }
         if(args.Length==4&&(args[0]=="--download-update"||args[0]=="--unpack-update")) {
@@ -42,14 +42,14 @@ internal static class Program {
             return 1;
         }
     }
-    private static byte[] ReadKmz() {
+    private static byte[] ReadArchive(string extension) {
         string encoded;using(var input=new StreamReader(Console.OpenStandardInput(),System.Text.Encoding.ASCII)){var chars=new char[11184813];int count=0,read;while(count<chars.Length&&(read=input.Read(chars,count,chars.Length-count))>0)count+=read;if(count>11184812)throw new Exception("KMZ excede 8 MB.");encoded=new String(chars,0,count);}
         var bytes=Convert.FromBase64String(encoded);if(bytes.Length>8388608)throw new Exception("KMZ excede 8 MB.");
         using(var memory=new MemoryStream(bytes))using(var zip=new System.IO.Compression.ZipArchive(memory,System.IO.Compression.ZipArchiveMode.Read)) {
             if(zip.Entries.Count>1024)throw new Exception("KMZ contém entradas demais.");
             System.IO.Compression.ZipArchiveEntry chosen=null;int kmlCount=0;
-            foreach(var entry in zip.Entries)if(entry.FullName.EndsWith(".kml",StringComparison.OrdinalIgnoreCase)){kmlCount++;if(chosen==null||entry.FullName.Equals("doc.kml",StringComparison.OrdinalIgnoreCase))chosen=entry;}
-            if(chosen==null)throw new Exception("KMZ sem arquivo KML.");
+            foreach(var entry in zip.Entries)if(entry.FullName.EndsWith(extension,StringComparison.OrdinalIgnoreCase)){kmlCount++;if(chosen==null||entry.FullName.Equals("doc.kml",StringComparison.OrdinalIgnoreCase))chosen=entry;}
+            if(chosen==null)throw new Exception("Archive has no "+extension+" document.");
             if(kmlCount>1&&!chosen.FullName.Equals("doc.kml",StringComparison.OrdinalIgnoreCase))throw new Exception("KMZ contém vários KML sem doc.kml principal.");
             if(chosen.Length>8388608)throw new Exception("KML interno excede 8 MB.");
             using(var input=chosen.Open())using(var output=new MemoryStream()){var buffer=new byte[81920];int read;while((read=input.Read(buffer,0,buffer.Length))>0){if(output.Length+read>8388608)throw new Exception("KML interno excede 8 MB.");output.Write(buffer,0,read);}var content=output.ToArray();new System.Text.UTF8Encoding(false,true).GetString(content);return content;}
@@ -244,7 +244,7 @@ internal sealed class ShellWindow : Form {
     private void Message(object sender,CoreWebView2WebMessageReceivedEventArgs e) {
         Uri source;if(!Uri.TryCreate(e.Source,UriKind.Absolute,out source)||source.GetLeftPart(UriPartial.Authority)!=target.GetLeftPart(UriPartial.Authority))return;
         string command;try{command=e.TryGetWebMessageAsString();}catch{return;}
-        if(command=="open-files"){using(var dialog=new OpenFileDialog()){dialog.Title="SkyLab — Open file";dialog.Filter="SkyLab files|*.kml;*.kmz;*.mis;*.mission;*.skylab;*.json";dialog.Multiselect=true;if(dialog.ShowDialog(this)==DialogResult.OK)QueueFiles(dialog.FileNames);}return;}
+        if(command=="open-files"){using(var dialog=new OpenFileDialog()){dialog.Title="SkyLab — Open file";dialog.Filter="SkyLab files|*.kml;*.kmz;*.mis;*.mission;*.skylab;*.json;*.qgs;*.qgz;*.qlr;*.gpkg;*.shp;*.geojson";dialog.Multiselect=true;if(dialog.ShowDialog(this)==DialogResult.OK)QueueFiles(dialog.FileNames);}return;}
         if(command=="dropped-files"){var paths=new System.Collections.Generic.List<string>();foreach(var item in e.AdditionalObjects){var file=item as CoreWebView2File;if(file!=null)paths.Add(file.Path);}QueueFiles(paths.ToArray());return;}
         if(command=="startup-painted"){pagePainted=true;if(ready)RevealPage();return;}
         if(command.StartsWith("caption:")){var parts=command.Split(':');double height,scale;if(parts.Length==3&&Double.TryParse(parts[1],System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out height)&&Double.TryParse(parts[2],System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out scale)&&height>=40&&height<=100&&scale>=0.5&&scale<=4)LayoutCaption(height,scale);return;}

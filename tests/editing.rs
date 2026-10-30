@@ -1,6 +1,7 @@
 use skylab_rust::{Crs, Line, Project, editing, length};
 fn line(name: &str, points: &[[f64; 2]]) -> Line {
     Line {
+        curve: None,
         hidden: false,
         layer: None,
         name: name.into(),

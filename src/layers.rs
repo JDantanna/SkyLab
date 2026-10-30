@@ -26,6 +26,7 @@ pub fn validate(project: &Project) -> Result<()> {
             || layer.name.len() > 1024
             || layer.name.chars().any(char::is_control)
             || ![
+                "QGIS",
                 "KML",
                 "KMZ",
                 "MIS",

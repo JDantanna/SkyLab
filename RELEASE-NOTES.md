@@ -1,10 +1,9 @@
-# SkyLab 0.4
+# SkyLab 0.5
 
-- Project layers com grupos, arrastar e soltar, visibilidade, renomeação por menu ou duplo clique e exclusão com Ctrl+Z.
-- Prévia de Generate lines mais leve: somente o polígono ativo e atualização das linhas temporárias.
-- Painéis responsivos ao maximizar e restaurar a janela.
-- Projetos com extensão `.skylab`, ícone e associação ao programa no Windows; projetos JSON antigos continuam abrindo.
-- Nomes de projeto/polígono e visibilidade individual dos polígonos preservados no arquivo.
-- Validation removido de Help.
-
-Atualização interna preserva as abas ao reiniciar. Versão de testes: Rafael Dantas, rda@skytem.com.
+- Modo cartografia: Shift+C, workspace ampliado e barra lateral flutuante.
+- Edição de linhas por pontos e alças Bézier, corte, extensão e emenda com prévia; Ctrl+Z/Ctrl+Y.
+- Satélite e enquadramento acessíveis na barra; Espaço mantém navegação durante edição.
+- Importação de projetos QGIS .qgs/.qgz/.qlr com fontes vetoriais locais GeoPackage, Shapefile, GeoJSON e KML/KMZ, preservando grupos e coordenadas.
+- Fontes referenciadas devem continuar disponíveis junto ao projeto. Fontes ausentes/incompatíveis geram aviso; não são executados plugins ou conexões remotas do QGIS.
+- Salvar mantém o projeto em .skylab. MIS exporta a geometria validada e achatada, sem remover vértices.
+- Atualização interna preserva os projetos abertos. Versão de testes institucional.

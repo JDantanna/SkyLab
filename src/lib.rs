@@ -6,10 +6,13 @@ pub mod curves;
 pub mod desktop;
 pub mod editing;
 pub mod files;
+mod geopackage;
 pub mod installation;
 pub mod kmz;
 pub mod layers;
+pub mod line_paths;
 pub mod projection;
+pub mod qgis;
 pub mod recovery;
 pub mod self_update;
 pub mod setup;
@@ -40,6 +43,8 @@ pub struct Polygon {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Line {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub curve: Option<Vec<curves::Anchor>>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub hidden: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -279,7 +284,7 @@ impl Project {
         self.validate_with_lines(&self.lines)
     }
     fn validate_with_lines(&self, lines: &[Line]) -> Result<()> {
-        if ![1, 2, 3, 4, 5, 6].contains(&self.version)
+        if ![1, 2, 3, 4, 5, 6, 7].contains(&self.version)
             || (self.crs.authority.is_some() && self.version < 2)
         {
             return Err("Versão de projeto não suportada.".into());
@@ -346,6 +351,30 @@ impl Project {
         {
             self.crs.inverse(*p)?;
         }
+        for line in lines {
+            if let Some(anchors) = &line.curve {
+                if self.version < 7 {
+                    return Err("Editable line curves require project format 7.".into());
+                }
+                let expected = line_paths::flatten(anchors)?;
+                if expected.len() != line.points.len()
+                    || expected
+                        .iter()
+                        .zip(&line.points)
+                        .any(|(a, b)| distance(*a, *b) > 1e-6)
+                {
+                    return Err("Line control points do not match its geometry.".into());
+                }
+                for anchor in anchors {
+                    for point in std::iter::once(&anchor.point)
+                        .chain(anchor.incoming.iter())
+                        .chain(anchor.outgoing.iter())
+                    {
+                        self.crs.inverse(*point)?;
+                    }
+                }
+            }
+        }
         validate_line_data(&self.crs, lines)?;
         Ok(())
     }
@@ -398,6 +427,7 @@ pub fn import_mis(text: &str, crs: Crs) -> Result<Project> {
                 p.lines.push(l)
             }
             current = Some(Line {
+                curve: None,
                 hidden: false,
                 layer: None,
                 name: s.into(),
@@ -511,6 +541,7 @@ pub fn import_kml(text: &str, crs: Crs) -> Result<Project> {
             }
             used_names.insert(nm.clone());
             p.lines.push(Line {
+                curve: None,
                 hidden: false,
                 layer: None,
                 name: nm,
@@ -664,6 +695,7 @@ pub fn generate(p: &Project, s: &Settings) -> Result<Vec<Line>> {
         }
         let point = |u: f64| [along[0] * u + across[0] * v, along[1] * u + across[1] * v];
         let l = Line {
+            curve: None,
             hidden: false,
             layer: None,
             name: String::new(),
@@ -679,6 +711,7 @@ pub fn generate(p: &Project, s: &Settings) -> Result<Vec<Line>> {
                 )
                 .ok_or("Numeração excedida")?;
             let mut line = Line {
+                curve: None,
                 hidden: false,
                 layer: None,
                 name: format!("{}{number:06}", s.prefix),
@@ -726,6 +759,7 @@ pub fn trim_line(l: &Line, start: f64, end: f64) -> Result<Line> {
         }
     }
     Ok(Line {
+        curve: None,
         hidden: l.hidden,
         layer: l.layer,
         name: l.name.clone(),

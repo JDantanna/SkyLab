@@ -53,3 +53,5 @@ test('indexed hierarchy totals retain empty groups, nested counts and immutable 
  assert.equal(layers.visible(project,3),true);const hidden=layers.toggle(project,'layer',1);assert.equal(layers.visible(hidden,3),false);assert.equal(layers.visible(project,3),true);
  const moved=layers.move(hidden,3,null);assert.equal(layers.visible(moved,3),true);assert.deepEqual([...layers.descendants(moved,1)].sort(),[1,2,4]);assert.deepEqual([...layers.descendants(project,1)].sort(),[1,2,3,4]);
 });
+
+test('polygon visibility changes never downgrade editable line project format',()=>{const p={version:7,layers:[],lines:[],polygons:[{hidden:false}],warnings:[]};assert.equal(layers.toggle(p,'polygon',0).version,7);assert.equal(p.polygons[0].hidden,false);});

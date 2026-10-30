@@ -131,6 +131,9 @@ mod native {
         .as_ref()
         .map_err(Clone::clone)
     }
+    pub fn runtime_directory() -> Result<PathBuf> {
+        Ok(api()?.dir.clone())
+    }
     use std::os::windows::ffi::OsStrExt;
     struct Pipeline {
         context: Handle,
@@ -189,4 +192,9 @@ pub fn transform(from: &str, to: &str, p: Point) -> Result<Point> {
         let _ = (from, to, p);
         Err("The bundled PROJ engine requires Windows x64".into())
     }
+}
+
+#[cfg(windows)]
+pub(crate) fn runtime_directory() -> Result<std::path::PathBuf> {
+    native::runtime_directory()
 }

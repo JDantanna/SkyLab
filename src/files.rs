@@ -86,14 +86,19 @@ impl Files {
             .and_then(|s| s.to_str())
             .unwrap_or("")
             .to_ascii_lowercase();
-        if !["mis", "mission", "kml", "kmz", "json", "skylab"].contains(&ext.as_str()) {
+        if ![
+            "mis", "mission", "kml", "kmz", "json", "skylab", "qgs", "qgz", "qlr", "gpkg", "shp",
+            "geojson",
+        ]
+        .contains(&ext.as_str())
+        {
             return Err("Choose KML, KMZ, MIS or a SkyLab project".into());
         }
         let path = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
         if require_file {
             let meta = fs::metadata(&path)
                 .map_err(|_| "File unavailable. It may have been moved or deleted.")?;
-            if !meta.is_file() || meta.len() > LIMIT {
+            if !meta.is_file() || (meta.len() > LIMIT && ext != "gpkg" && ext != "shp") {
                 return Err("File must be smaller than 8 MB".into());
             }
         }
@@ -171,6 +176,25 @@ impl Files {
             .iter()
             .find(|e| e.id == id)
             .ok_or("Unknown file")?;
+        if entry
+            .path
+            .extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|e| {
+                ["qgs", "qgz", "qlr", "gpkg", "shp", "geojson"]
+                    .iter()
+                    .any(|ext| e.eq_ignore_ascii_case(ext))
+            })
+        {
+            let bundle = crate::qgis::read(&entry.path)?;
+            let text = serde_json::to_string(&bundle).map_err(|e| e.to_string())?;
+            if text.len() > 12 * 1024 * 1024 {
+                return Err("QGIS vector selection exceeds the import size limit".into());
+            }
+            return Ok(
+                serde_json::json!({"name":entry.name,"size":text.len(),"text":text,"qgis":true}),
+            );
+        }
         let file = fs::File::open(&entry.path)
             .map_err(|_| "File unavailable. It may have been moved or deleted.")?;
         if !file.metadata().map_err(|e| e.to_string())?.is_file() {
@@ -196,7 +220,7 @@ impl Files {
         Ok(serde_json::json!({"name":entry.name,"size":size,"text":text}))
     }
 }
-fn base64(bytes: &[u8]) -> String {
+pub(crate) fn base64(bytes: &[u8]) -> String {
     const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for group in bytes.chunks(3) {

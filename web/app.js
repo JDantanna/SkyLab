@@ -56,7 +56,7 @@ $('search').oninput=renderList;
 for(const ev of ['dragenter','dragover'])$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.add('drag')});$('drop').ondragleave=()=>$('drop').classList.remove('drag');
 async function mutate(fn,msg){const p=clone(project);await fn(p);commit(await api('validate',{project:p}),msg)}
 $('rename').onclick=()=>action(()=>mutate(p=>p.lines[selected].name=$('line-name').value,'Nome atualizado.'));
-$('apply-points').onclick=()=>action(()=>mutate(p=>{p.lines[selected].points=$('points').value.trim().split(/\n/).map(s=>{const v=s.trim().split(/\s+/).map(Number);if(v.length!==2||v.some(x=>!Number.isFinite(x)))throw Error('Use dois números por vértice: Leste Norte, com ponto decimal.');return v})},'Coordenadas atualizadas. Confira a geometria.'));
+$('apply-points').onclick=()=>action(()=>mutate(p=>{p.lines[selected].curve=null;p.lines[selected].points=$('points').value.trim().split(/\n/).map(s=>{const v=s.trim().split(/\s+/).map(Number);if(v.length!==2||v.some(x=>!Number.isFinite(x)))throw Error('Use dois números por vértice: Leste Norte, com ponto decimal.');return v})},'Coordenadas atualizadas. Confira a geometria.'));
 $('trim').onclick=()=>action(async()=>commit(await api('trim',{index:selected,start:Number($('cut-start').value),end:Number($('cut-end').value)}),'Trecho mantido; extremidades removidas.'));
 $('split').onclick=()=>action(async()=>{const index=selected,data=await api('split',{index,start:Number($('split-at').value)});await commit(data,tr('Linha dividida em duas partes com nomes próprios.'));selection=new Set([index,index+1]);selected=index;render();});
 $('clip-all').onclick=()=>action(async()=>commit(await api('clip'),'Recorte concluído. Partes fora do bloco foram removidas.'));

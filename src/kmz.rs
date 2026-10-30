@@ -1,6 +1,12 @@
 //! Read only the KML inside an archive; never extract paths to the filesystem.
 use crate::Result;
 pub fn read(text: &str) -> Result<String> {
+    read_archive(text, "--read-kmz")
+}
+pub fn read_qgz(text: &str) -> Result<String> {
+    read_archive(text, "--read-qgz")
+}
+fn read_archive(text: &str, command_arg: &str) -> Result<String> {
     if text.len() > 11_184_812 {
         return Err("KMZ excede 8 MB.".into());
     }
@@ -9,7 +15,7 @@ pub fn read(text: &str) -> Result<String> {
         use std::{io::Write, process::Stdio};
         let mut command = crate::desktop::host_command()?;
         command
-            .arg("--read-kmz")
+            .arg(command_arg)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
@@ -33,7 +39,7 @@ pub fn read(text: &str) -> Result<String> {
     }
     #[cfg(not(windows))]
     {
-        let _ = text;
+        let _ = (text, command_arg);
         Err("Importação KMZ disponível no Windows.".into())
     }
 }

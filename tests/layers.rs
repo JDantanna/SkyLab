@@ -38,6 +38,7 @@ fn fixture() -> Project {
     ];
     p.lines = vec![
         Line {
+            curve: None,
             hidden: false,
             layer: Some(1),
             name: "L100".into(),
@@ -48,6 +49,7 @@ fn fixture() -> Project {
             ],
         },
         Line {
+            curve: None,
             hidden: false,
             layer: Some(2),
             name: "L100".into(),

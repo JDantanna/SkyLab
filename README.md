@@ -1,4 +1,4 @@
-# SkyLab — 0.4
+# SkyLab — 0.5
 
 Primeira versão utilizável, local, do fluxo de missões do SkyLab para helicópteros. O cálculo e a validação são feitos em Rust; a interface usa uma janela Windows própria e opera localmente. Não utiliza nem executa o programa antigo.
 
@@ -62,7 +62,7 @@ A opção Google Satellite XYZ utiliza a mesma conexão do QuickMapServices/QGIS
 
 ## Instalar e abrir
 
-Obtenha **SkyTEM-SkyLab-Setup-0.4-r1.exe** na [Release 0.2](https://github.com/JDantanna/SkyLab/releases/tag/v0.4-r1) e execute o instalador. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
+Obtenha **SkyTEM-SkyLab-Setup-0.5-r1.exe** na [Release 0.5](https://github.com/JDantanna/SkyLab/releases/tag/v0.5-r1) e execute o instalador. A instalação usa uma interface azul/cinza com a logo SkyTEM original, instala somente para o usuário atual, cria entrada no menu Iniciar e oferece atalho na área de trabalho. O destino é `%LOCALAPPDATA%\Programs\SkyTEM\SkyLab`. Não exige acesso de administrador e não instala um serviço permanente. A operação é offline quando os pré-requisitos descritos abaixo estão presentes.
 
 Abra **SkyLab** pelo menu Iniciar ou pelo atalho. A janela Windows usa WebView2 e controles integrados ao cabeçalho azul, sem a moldura do navegador. A versão exibida é **0.2** (0.2.0 no pacote Rust). Antes de qualquer avanço de versão, será solicitada uma decisão explícita do usuário.
 
@@ -128,3 +128,14 @@ As licenças das bibliotecas distribuídas são instaladas como `THIRD-PARTY-NOT
 A revisão de layout aplica a nova marca SkyLab, organiza os comandos à esquerda, abre Sobre pelo nome, usa bandeiras para idiomas, move o exemplo para Ajuda e corrige o Ctrl+Z. Shift seleciona intervalos completos. Consulte GOOGLE-MAPS-CUSTOS.md para a pesquisa solicitada sobre gratuidade.
 
 A revisão atual mantém a versão 0.2. O relatório da otimização anterior permanece como registro histórico. Consulte AUDITORIA-OTIMIZACAO-0.1.md para código removido, medições e validação.
+
+
+## Cartografia e QGIS (0.5)
+
+Com um arquivo carregado, **Shift+C** alterna a cartografia. A barra vertical pode ser arrastada. **V** seleciona linhas/pontos, **Q** corta, **P** desenha linhas abertas, **Espaço** move o mapa temporariamente. Shift+clique insere um ponto na linha selecionada; arrastar uma alça altera a curva e Alt separa as alças. A caneta pode começar em um extremo para estender uma linha. Arrastar um ponto intermediário com a caneta cria alças; Alt+clique retira as alças para voltar a um canto. Enter aplica o desenho, Esc cancela. Duas linhas selecionadas podem ser emendadas: confira a ligação na prévia verde antes de aplicar.
+
+Abra `.qgs`, `.qgz` ou `.qlr` pelo seletor do programa. As fontes locais referenciadas devem permanecer disponíveis, inclusive caminhos relativos: GeoPackage (tabela nomeada no projeto), Shapefile (com CRS no projeto ou `.prj`), GeoJSON e KML/KMZ. Também é possível abrir vetores avulsos; um GeoPackage com várias tabelas deve ser aberto por um projeto QGIS que identifique as tabelas.
+
+O importador traz somente linhas, polígonos, grupos, visibilidade e coordenadas; não importa estilos, plugins, layouts de impressão, rasters, pontos ou tabelas de atributos. Fontes ausentes, provedores remotos e tipos não suportados aparecem nas notas de importação; nenhum plugin ou consulta remota do QGIS é executado. O satélite continua opcional, ativado pelo operador.
+
+As referências de formato e ferramentas consultadas são a [documentação de arquivos QGIS](https://docs.qgis.org/3.44/en/docs/user_manual/appendices/qgis_file_formats.html) e a [documentação de edição vetorial](https://documentation.qgis.org/3.44/en/docs/user_manual/working_with_vector/editing_geometry_attributes.html). Os arquivos originais são preservados; o resultado editado é salvo como `.skylab` e exportado como MIS/KML.

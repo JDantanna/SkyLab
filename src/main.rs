@@ -38,6 +38,17 @@ fn process(r: Request) -> Result<Value> {
     if r.op == "read-kmz" {
         return Ok(json!({"text":kmz::read(&r.text)?}));
     }
+    if r.op == "inspect-qgis" || r.op == "import-qgis" {
+        let bundle: qgis::Bundle = serde_json::from_str(&r.text).map_err(|e| e.to_string())?;
+        return if r.op == "inspect-qgis" {
+            qgis::inspect(&bundle)
+        } else {
+            Ok(json!(qgis::import(
+                &bundle,
+                r.crs.ok_or("Confirm the coordinate system")?
+            )?))
+        };
+    }
     if r.op == "inspect-crs" {
         if let Ok(p) = serde_json::from_str::<Project>(&r.text) {
             p.crs.validate()?;
@@ -100,6 +111,9 @@ fn process(r: Request) -> Result<Value> {
     if !matches!(
         r.op.as_str(),
         "generate"
+            | "upsert-line"
+            | "insert-line-anchor"
+            | "join-lines"
             | "generate-preview"
             | "export-mis"
             | "export-kml"
@@ -111,6 +125,49 @@ fn process(r: Request) -> Result<Value> {
         p.validate()?;
     }
     match r.op.as_str() {
+        "line-anchors" => {
+            let line = p
+                .lines
+                .get(r.index.ok_or("Select a line")?)
+                .ok_or("Selected line is unavailable")?;
+            let mut anchors = line_paths::anchors(line);
+            if r.geographic {
+                for a in &mut anchors {
+                    a.point = p.crs.inverse(a.point)?;
+                    a.incoming = a.incoming.map(|v| p.crs.inverse(v)).transpose()?;
+                    a.outgoing = a.outgoing.map(|v| p.crs.inverse(v)).transpose()?;
+                }
+            }
+            return Ok(json!(anchors));
+        }
+        "upsert-line" => {
+            let mut anchors = r.anchors.ok_or("Line control points are missing")?;
+            if r.geographic {
+                for a in &mut anchors {
+                    a.point = p.crs.forward(a.point)?;
+                    a.incoming = a.incoming.map(|v| p.crs.forward(v)).transpose()?;
+                    a.outgoing = a.outgoing.map(|v| p.crs.forward(v)).transpose()?;
+                }
+            }
+            return Ok(json!(line_paths::upsert(&p, r.index, anchors)?));
+        }
+        "insert-line-anchor" => {
+            let mut point = r.point.ok_or("Anchor location is missing")?;
+            if r.geographic {
+                point = p.crs.forward(point)?;
+            }
+            return Ok(json!(line_paths::insert(
+                &p,
+                r.index.ok_or("Select a line")?,
+                point
+            )?));
+        }
+        "join-lines" => {
+            return Ok(json!(line_paths::join(
+                &p,
+                &r.indices.ok_or("Select two lines")?
+            )?));
+        }
         "polygon-anchors" => {
             let polygon = p
                 .polygons
@@ -160,7 +217,8 @@ fn process(r: Request) -> Result<Value> {
         "reproject" => {
             let target = r.crs.ok_or("Choose the target CRS")?;
             target.validate()?;
-            let flattened = p.polygons.iter().any(|g| g.curve.is_some());
+            let flattened = p.polygons.iter().any(|g| g.curve.is_some())
+                || p.lines.iter().any(|l| l.curve.is_some());
             for g in &mut p.polygons {
                 g.curve = None;
                 for point in g.outer.iter_mut().chain(g.holes.iter_mut().flatten()) {
@@ -168,6 +226,7 @@ fn process(r: Request) -> Result<Value> {
                 }
             }
             for l in &mut p.lines {
+                l.curve = None;
                 for point in &mut l.points {
                     *point = target.forward(p.crs.inverse(*point)?)?;
                 }
@@ -213,6 +272,7 @@ fn process(r: Request) -> Result<Value> {
                 }
             }
             for l in &mut p.lines {
+                l.curve = None;
                 geographic(&mut l.points)?;
             }
             return Ok(json!(p));
@@ -340,6 +400,7 @@ fn process(r: Request) -> Result<Value> {
                 let count = pieces.len();
                 for (j, points) in pieces.into_iter().enumerate() {
                     out.push(Line {
+                        curve: None,
                         hidden: l.hidden,
                         layer: l.layer,
                         name: if count > 1 {
@@ -850,6 +911,16 @@ fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 200,
                 "text/javascript; charset=utf-8",
                 include_str!("../web/studio.js").into(),
+            ),
+            ("GET", "/cartography.js") => (
+                200,
+                "text/javascript; charset=utf-8",
+                include_str!("../web/cartography.js").into(),
+            ),
+            ("GET", "/cartography.css") => (
+                200,
+                "text/css; charset=utf-8",
+                include_str!("../web/cartography.css").into(),
             ),
             ("GET", "/app.js") => (
                 200,

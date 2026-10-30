@@ -2,6 +2,20 @@
 // All translations are local; no project data is sent to a translation service.
 window.skyLocale=localStorage.getItem('skylab.language')||'en';
 const translations=[
+['Linhas desenhadas','Drawn lines','Tegnede linjer'],
+['KML, KMZ, MIS, QGIS ou projeto .skylab','KML, KMZ, MIS, QGIS or .skylab project','KML, KMZ, MIS, QGIS eller .skylab-projekt'],['Arraste um arquivo KML, KMZ, MIS, QGIS ou SkyLab para abrir.','Drop a KML, KMZ, MIS, QGIS or SkyLab file to open it.','Træk en KML-, KMZ-, MIS-, QGIS- eller SkyLab-fil hertil for at åbne den.'],
+['Confirme um sistema projetado em metros para os vetores do QGIS. A zona UTM foi sugerida pela localização.','Confirm a projected coordinate system in metres for the QGIS vectors. The UTM zone was suggested from their location.','Bekræft et projiceret koordinatsystem i meter for QGIS-vektorerne. UTM-zonen er foreslået ud fra placeringen.'],
+['Arquivo importado com avisos. Confira as notas da importação.','File imported with warnings. Review the import notes.','Fil importeret med advarsler. Gennemgå importnoterne.'],
+
+['Cartografia','Cartography','Kartografi'],['Emendar linhas','Join lines','Sammenføj linjer'],['Arraste para mover','Drag to move','Træk for at flytte'],['Aplicar linha · Enter','Apply line · Enter','Anvend linje · Enter'],['Cancelar prévia · Esc','Cancel preview · Esc','Annuller forhåndsvisning · Esc'],['Sair da cartografia · Shift+C','Exit cartography · Shift+C','Afslut kartografi · Shift+C'],
+['Abra um arquivo antes de entrar na cartografia.','Open a file before entering cartography.','Åbn en fil før du starter kartografi.'],['Aplique com Enter ou cancele com Esc antes de sair.','Apply with Enter or cancel with Esc before leaving.','Anvend med Enter eller annuller med Esc før du afslutter.'],
+['Prévia da emenda: confira a conexão. Enter aplica; Esc cancela.','Join preview: inspect the connection. Enter applies; Esc cancels.','Forhåndsvisning: kontrollér forbindelsen. Enter anvender; Esc annullerer.'],
+['Clique para continuar a linha. Arraste para curvas. Enter aplica; Esc cancela.','Click to continue the line. Drag for curves. Enter applies; Esc cancels.','Klik for at fortsætte linjen. Træk for kurver. Enter anvender; Esc annullerer.'],
+['Caneta: clique para desenhar; use um extremo para estender a linha.','Pen: click to draw; use an endpoint to extend a line.','Pen: klik for at tegne; brug et endepunkt for at forlænge en linje.'],
+['Selecione uma linha para editar pontos. Shift + clique adiciona um ponto. Alt separa as alças.','Select a line to edit vertices. Shift + click adds a vertex. Alt separates handles.','Vælg en linje for at redigere knuder. Shift + klik tilføjer en knude. Alt adskiller håndtag.'],
+['Linha atualizada.','Line updated.','Linje opdateret.'],['Linhas emendadas.','Lines joined.','Linjer sammenføjet.'],['A linha precisa manter pelo menos dois pontos.','A line must keep at least two vertices.','En linje skal have mindst to knuder.'],['Ponto adicionado.','Vertex added.','Knude tilføjet.'],
+['Abra este arquivo vetorial pelo seletor do aplicativo para localizar suas fontes locais.','Open this vector file through the desktop file picker to locate its local sources.','Åbn vektorfilen gennem programmets filvælger for at finde lokale datakilder.'],
+
 ["PROJETO","PROJECT","PROJEKT"],
 ['Feche uma aba para abrir este arquivo em seu sistema de coordenadas.','Close a tab to open this file in its coordinate system.','Luk en fane for at åbne filen i dens koordinatsystem.'],
 ['Arquivo aberto em uma nova aba para preservar o sistema de coordenadas do projeto anterior.','File opened in a new tab to preserve the previous project’s coordinate system.','Filen blev åbnet i en ny fane for at bevare det forrige projekts koordinatsystem.'],

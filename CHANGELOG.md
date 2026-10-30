@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.5 — cartografia e projetos QGIS (revisão interna 1)
+
+- Shift+C abre/fecha o modo cartografia após carregar geometria. Workspace ampliado e barra vertical flutuante com seleção, corte, caneta, mão, excluir, emendar, aplicar/cancelar, satélite, enquadrar e histórico. Layout de painéis preservado ao sair.
+- Linhas aceitam controles Bézier persistidos no formato 7: mover pontos e alças, adicionar ponto com Shift, excluir pontos, estender extremos, desenhar linha aberta e emendar com prévia confirmada. Cálculos e validação no Rust; exportação MIS mantém todos os vértices achatados a tolerância de 0,1 m.
+- Importação QGS/QGZ/QLR e vetores locais GeoPackage, Shapefile, GeoJSON e KML/KMZ; grupos, visibilidade e CRS preservados/transformados para o sistema de trabalho confirmado. Fontes ausentes, remotas e formatos não suportados são informados.
+- Originais QGIS são lidos sem alteração; projetos editados continuam sendo salvos em .skylab. Estilos, layouts de impressão, plugins, rasters e tabelas de atributos ficam fora da importação.
+- Aviso de falhas parciais da imagem XYZ acompanha os tiles ativos, sem ser escondido por outro tile carregado com sucesso.
+
+
 ## 0.4 — revisão de código e otimização (revisão interna 4)
 
 - Hierarquia indexada por projeto imutável: filhos, visibilidade herdada e totais de grupos deixam de percorrer toda a geometria para cada camada.
